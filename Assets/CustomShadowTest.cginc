@@ -60,6 +60,8 @@ float2 ProjectVP(float3 vp)
 
 float4 Fragment(Varyings input) : SV_Target
 {
+    float4 src = tex2D(_MainTex, input.texcoord);
+
     // Depth sample at the origin
     float2 uv0 = input.texcoord;
     float z0 = SampleDepth(uv0);
@@ -72,16 +74,16 @@ float4 Fragment(Varyings input) : SV_Target
 
     // Move along the light vector and get a depth sample.
     [loop]
-    for (int i = 0; i < 256; i++)
+    for (int i = 8; i < 128; i++)
     {
-        float3 vp2 = vp + _LightDirection * 0.01 * i;
+        float3 vp2 = vp + _LightDirection * 0.005 * i;
         float2 uv2 = ProjectVP(vp2);
 
         // Resample the depth at the displaced point.
         float3 vp3 = InverseProjectUV(uv2);
 
-        if (vp3.z < vp2.z) return (float4)i / 256;
+        if (vp3.z < vp2.z && vp2.z - vp3.z < 0.5) return 0;//src * i / 256;
     }
 
-    return (float4)1;
+    return src;
 }
