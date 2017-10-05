@@ -4,6 +4,7 @@ sampler2D _MainTex;
 sampler2D _CameraDepthTexture;
 
 float3 _LightDirection;
+float _RejectionDepth;
 
 struct Varyings
 {
@@ -82,7 +83,7 @@ float4 Fragment(Varyings input) : SV_Target
         // Resample the depth at the displaced point.
         float3 vp3 = InverseProjectUV(uv2);
 
-        if (vp3.z < vp2.z - 0.01 && vp2.z - vp3.z < 0.2) return 0;//src * i / 256;
+        if (vp3.z < vp2.z - 0.01 && vp2.z - vp3.z < _RejectionDepth) return 0;//src * i / 256;
     }
 
     return src;

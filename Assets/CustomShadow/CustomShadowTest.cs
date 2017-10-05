@@ -4,6 +4,7 @@
 public class CustomShadowTest : MonoBehaviour
 {
     [SerializeField] Light _light;
+    [SerializeField, Range(0, 5)] float _rejectionDepth = 0.5f;
     [SerializeField] Shader _shader;
 
     Material _material;
@@ -37,6 +38,8 @@ public class CustomShadowTest : MonoBehaviour
                 transform.InverseTransformDirection(-_light.transform.forward)
             );
         }
+
+        _material.SetFloat("_RejectionDepth", _rejectionDepth);
 
         Graphics.Blit(source, dest, _material, 0);
     }
