@@ -23,11 +23,14 @@ public class CustomShadowTest : MonoBehaviour
             _material.hideFlags = HideFlags.DontSave;
         }
 
-        _command = new CommandBuffer();
-        _command.name = "Contact Shadow";
-        _command.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
+        if (_light)
+        {
+            _command = new CommandBuffer();
+            _command.name = "Contact Shadow";
+            _command.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
 
-        _camera.AddCommandBuffer(CameraEvent.BeforeImageEffects, _command);
+            _light.AddCommandBuffer(LightEvent.AfterScreenspaceMask, _command);
+        }
     }
 
     void OnDisable()
