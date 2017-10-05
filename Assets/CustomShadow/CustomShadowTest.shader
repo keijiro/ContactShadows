@@ -3,7 +3,6 @@
     Properties
     {
         _MainTex("", 2D) = ""{}
-        _WPosTex("", 2D) = ""{}
     }
     SubShader
     {

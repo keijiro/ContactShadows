@@ -31,7 +31,12 @@ public class CustomShadowTest : MonoBehaviour
         }
 
         if (_light != null)
-            _material.SetVector("_LightDirection", -_light.transform.forward);
+        {
+            _material.SetVector(
+                "_LightDirection",
+                transform.InverseTransformDirection(-_light.transform.forward)
+            );
+        }
 
         Graphics.Blit(source, dest, _material, 0);
     }
