@@ -21,6 +21,9 @@ Varyings Vertex(uint vertexID : SV_VertexID)
     Varyings o;
     o.position = vpos;
     o.texcoord = (vpos.xy + 1) / 2;
+#ifdef UNITY_UV_STARTS_AT_TOP
+    o.texcoord.y = 1 - o.texcoord.y;
+#endif
     return o;
 }
 
@@ -83,8 +86,8 @@ float4 Fragment(Varyings input) : SV_Target
         // Resample the depth at the displaced point.
         float3 vp3 = InverseProjectUV(uv2);
 
-        if (vp3.z < vp2.z - 0.01 && vp2.z - vp3.z < _RejectionDepth) return 0;//src * i / 256;
+        if (vp3.z < vp2.z - 0.01 && vp2.z - vp3.z < _RejectionDepth) return 0;
     }
 
-    return src;
+    return 1;
 }

@@ -9,6 +9,7 @@
         Cull Off ZWrite Off ZTest Always
         Pass
         {
+            Blend Zero SrcAlpha
             CGPROGRAM
             #pragma vertex Vertex
             #pragma fragment Fragment
