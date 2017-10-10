@@ -6,11 +6,11 @@ public class CustomShadowTest : MonoBehaviour
 {
     [SerializeField] Light _light;
     [SerializeField, Range(0, 5)] float _rejectionDepth = 0.5f;
-    [SerializeField] Shader _shader;
+
+    [SerializeField, HideInInspector] Shader _shader;
 
     Material _material;
     CommandBuffer _command;
-
 
     void OnEnable()
     {
