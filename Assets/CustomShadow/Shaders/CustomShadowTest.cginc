@@ -30,6 +30,23 @@ Varyings Vertex(uint vertexID : SV_VertexID)
     return o;
 }
 
+// Hash function from H. Schechter & R. Bridson, goo.gl/RXiKaH
+uint Hash(uint s)
+{
+    s ^= 2747636419u;
+    s *= 2654435769u;
+    s ^= s >> 16;
+    s *= 2654435769u;
+    s ^= s >> 16;
+    s *= 2654435769u;
+    return s;
+}
+
+float Random(uint seed)
+{
+    return float(Hash(seed)) / 4294967295.0; // 2^32-1
+}
+
 // Get a raw depth from the depth buffer.
 float SampleRawDepth(float2 uv)
 {
@@ -49,9 +66,9 @@ float3 InverseProjectUVZ(float2 uv, float z)
 }
 
 // Inverse project UV into the view space with sampling the depth buffer.
-float3 InverseProjectUV(float2 uv)
+float3 InverseProjectUV(float2 uv, float2 rnd)
 {
-    return InverseProjectUVZ(uv, SampleRawDepth(uv));
+    return InverseProjectUVZ(uv, SampleRawDepth(uv + rnd));
 }
 
 // Project a view space position into the clip space.
@@ -68,14 +85,21 @@ float4 Fragment(Varyings input) : SV_Target
     if (z0 > 0.999999) return 0; // BG early-out
     float3 vp0 = InverseProjectUVZ(input.texcoord, z0);
 
+const uint kSamples = 80;
+const uint kSeed = dot(input.texcoord.xy, float2(3387989.43, 43895.892));
+float alpha = 1;
+
     // Ray-tracing loop from the origin along the reverse light direction.
-    UNITY_LOOP for (int i = 1; i < 128; i++)
+    UNITY_LOOP for (uint i = 1; i < 1 + kSamples; i++)
     {
+        float2 rnd = float2(Random(kSeed + i * 2), Random(kSeed + i * 2 + 1));
+        rnd = (rnd - 0.5) * 0.01;
+
         // View space position on the ray.
         float3 vp_ray = vp0 + _LightDirection * 0.005 * i;
 
         // View space position calculated from the depth sample.
-        float3 vp_depth = InverseProjectUV(ProjectVP(vp_ray));
+        float3 vp_depth = InverseProjectUV(ProjectVP(vp_ray), rnd);
 
         // Depth difference between them.
         // Negative: ray is near than the depth sample (not occluded)
@@ -83,8 +107,9 @@ float4 Fragment(Varyings input) : SV_Target
         float diff = vp_ray.z - vp_depth.z;
 
         // Occlusion test.
-        if (diff > 0.01 && diff < _RejectionDepth) return 0;
+        if (diff > 0.01 && diff < _RejectionDepth) alpha -= 0.14;
+        if (alpha <= 0) return 0;
     }
 
-    return 1;
+    return alpha;
 }
