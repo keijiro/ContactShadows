@@ -10,13 +10,10 @@ public class CustomShadowTest : MonoBehaviour
 
     Material _material;
     CommandBuffer _command;
-    Camera _camera;
 
 
     void OnEnable()
     {
-        _camera = GetComponent<Camera>();
-
         if (_material == null)
         {
             _material = new Material(_shader);
@@ -35,9 +32,9 @@ public class CustomShadowTest : MonoBehaviour
 
     void OnDisable()
     {
-        if (_command != null)
+        if (_command != null && _light != null)
         {
-            _camera.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, _command);
+            _light.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, _command);
             _command.Dispose();
             _command = null;
         }
@@ -56,7 +53,7 @@ public class CustomShadowTest : MonoBehaviour
 
     void Update()
     {
-        _camera.depthTextureMode |= DepthTextureMode.Depth;
+        GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth;
 
         var lightDir = (_light != null) ? _light.transform.forward : Vector3.forward;
         _material.SetVector("_LightDirection", transform.InverseTransformDirection(-lightDir));
