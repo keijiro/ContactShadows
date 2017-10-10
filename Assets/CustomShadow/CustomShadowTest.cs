@@ -11,6 +11,7 @@ public class CustomShadowTest : MonoBehaviour
 
     Material _material;
     CommandBuffer _command;
+    Light _boundLight;
 
     void OnEnable()
     {
@@ -20,23 +21,26 @@ public class CustomShadowTest : MonoBehaviour
             _material.hideFlags = HideFlags.DontSave;
         }
 
-        if (_light)
+        if (_command == null)
         {
             _command = new CommandBuffer();
             _command.name = "Contact Shadow";
             _command.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
+        }
 
+        if (_light != null)
+        {
             _light.AddCommandBuffer(LightEvent.AfterScreenspaceMask, _command);
+            _boundLight = _light;
         }
     }
 
     void OnDisable()
     {
-        if (_command != null && _light != null)
+        if (_boundLight != null)
         {
-            _light.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, _command);
-            _command.Dispose();
-            _command = null;
+            _boundLight.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, _command);
+            _boundLight = null;
         }
     }
 
@@ -59,5 +63,16 @@ public class CustomShadowTest : MonoBehaviour
         _material.SetVector("_LightDirection", transform.InverseTransformDirection(-lightDir));
 
         _material.SetFloat("_RejectionDepth", _rejectionDepth);
+
+        if (_boundLight != _light)
+        {
+            if (_boundLight != null)
+                _boundLight.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, _command);
+
+            if (_light != null)
+                _light.AddCommandBuffer(LightEvent.AfterScreenspaceMask, _command);
+
+            _boundLight = _light;
+        }
     }
 }
