@@ -1,20 +1,20 @@
 #include "Common.cginc"
 
-// Reversed light direction vector in the view space
-float3 _LightDirection;
+// Light vector
+// (reversed light direction in view space) * (ray-trace sample interval)
+float3 _LightVector;
+
+// Each sample weight
+float _SampleWeight;
 
 // Depth rejection threshold that determines the depth of each pixels.
 float _RejectionDepth;
 
+// Edge sharpness parameter
+float _Sharpness;
+
 // Total sample count
 uint _SampleCount;
-
-// Length of ray-tracing steps
-float _StepLength;
-
-float _SampleWeight;
-
-float _NoiseStrength;
 
 // Get a raw depth from the depth buffer.
 float SampleRawDepth(float2 uv)
@@ -64,7 +64,7 @@ float4 Fragment(Varyings input) : SV_Target
     UNITY_LOOP for (uint i = 1; i < _SampleCount; i++)
     {
         // View space position of the ray sample
-        float3 vp_ray = vp0 + _LightDirection * _StepLength * i;
+        float3 vp_ray = vp0 + _LightVector * (i + Random(seed + i) - 0.5);
 
         // View space position of the depth sample
         float3 vp_depth = InverseProjectUV(ProjectVP(vp_ray));
@@ -76,7 +76,7 @@ float4 Fragment(Varyings input) : SV_Target
 
         // Occlusion test
         if (diff > 0.0001 && diff < _RejectionDepth)
-            alpha -= _SampleWeight * (1 - Random(seed + i) * _NoiseStrength);
+            alpha -= saturate(min(diff, _RejectionDepth - diff) * _Sharpness) * _SampleWeight;
 
         // Completely occluded: Break out from the loop.
         if (alpha <= 0) return 0;

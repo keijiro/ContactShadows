@@ -6,9 +6,11 @@ using UnityEngine.Rendering;
 public class CustomShadowTest : MonoBehaviour
 {
     [SerializeField] Light _light;
+
     [SerializeField, Range(0, 5)] float _rejectionDepth = 0.5f;
+    [SerializeField, Range(0, 1)] float _sharpness = 0.5f;
+    [SerializeField, Range(0, 1)] float _stochasticity = 0.5f;
     [SerializeField, Range(8, 100)] int _sampleCount = 20;
-    [SerializeField, Range(0, 1)] float _sampleWeight = 0.5f;
 
     [SerializeField, HideInInspector] Shader _shader;
 
@@ -45,6 +47,8 @@ public class CustomShadowTest : MonoBehaviour
 
     void Update()
     {
+        if (_light == null) return;
+
         // Lazy initialization of the material.
         if (_material == null)
         {
@@ -64,13 +68,17 @@ public class CustomShadowTest : MonoBehaviour
         GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth;
 
         // Shader parameters
-        var lightDir = (_light != null) ? _light.transform.forward : Vector3.forward;
-        var distance = (_light != null) ? _light.shadowBias : 0;
-        _material.SetVector("_LightDirection", transform.InverseTransformDirection(-lightDir));
+        _material.SetVector("_LightVector",
+            transform.InverseTransformDirection(-_light.transform.forward) *
+            _light.shadowBias / _sampleCount
+        );
+
+        _material.SetFloat("_SampleWeight",
+            1 - _stochasticity * _sampleCount / (1 + _sampleCount)
+        );
+
         _material.SetFloat("_RejectionDepth", _rejectionDepth);
+        _material.SetFloat("_Sharpness", _sharpness * 200);
         _material.SetInt("_SampleCount", _sampleCount);
-        _material.SetFloat("_StepLength", distance / _sampleCount);
-        _material.SetFloat("_SampleWeight", (1 + _sampleWeight * _sampleCount) / (1 + _sampleCount));
-        _material.SetFloat("_NoiseStrength", 1 - _sampleWeight);
     }
 }

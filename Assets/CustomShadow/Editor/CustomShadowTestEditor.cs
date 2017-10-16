@@ -7,15 +7,17 @@ public class CustomShadowTestEditor : Editor
 {
     SerializedProperty _light;
     SerializedProperty _rejectionDepth;
+    SerializedProperty _sharpness;
+    SerializedProperty _stochasticity;
     SerializedProperty _sampleCount;
-    SerializedProperty _sampleWeight;
 
     void OnEnable()
     {
         _light = serializedObject.FindProperty("_light");
         _rejectionDepth = serializedObject.FindProperty("_rejectionDepth");
+        _sharpness = serializedObject.FindProperty("_sharpness");
+        _stochasticity = serializedObject.FindProperty("_stochasticity");
         _sampleCount = serializedObject.FindProperty("_sampleCount");
-        _sampleWeight = serializedObject.FindProperty("_sampleWeight");
     }
 
     public override void OnInspectorGUI()
@@ -24,8 +26,9 @@ public class CustomShadowTestEditor : Editor
 
         EditorGUILayout.PropertyField(_light);
         EditorGUILayout.PropertyField(_rejectionDepth);
+        EditorGUILayout.PropertyField(_sharpness);
+        EditorGUILayout.PropertyField(_stochasticity);
         EditorGUILayout.PropertyField(_sampleCount);
-        EditorGUILayout.PropertyField(_sampleWeight);
 
         serializedObject.ApplyModifiedProperties();
     }
