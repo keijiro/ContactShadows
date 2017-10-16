@@ -6,6 +6,12 @@ float3 _LightDirection;
 // Depth rejection threshold that determines the depth of each pixels.
 float _RejectionDepth;
 
+// Total sample count
+uint _SampleCount;
+
+// Length of ray-tracing steps
+float _StepLength;
+
 // Get a raw depth from the depth buffer.
 float SampleRawDepth(float2 uv)
 {
@@ -50,10 +56,11 @@ float4 Fragment(Varyings input) : SV_Target
 
     // Ray-tracing loop from the origin along the reverse light direction.
     float alpha = 1;
-    UNITY_LOOP for (uint i = 1; i < 80; i++)
+    UNITY_LOOP for (uint i = 1; i < _SampleCount; i++)
     {
         // View space position on the ray.
-        float3 vp_ray = vp0 + _LightDirection * 0.005 * i;
+        //float3 vp_ray = vp0 + _LightDirection * 0.005 * i;
+        float3 vp_ray = vp0 + _LightDirection * _StepLength * i;
 
         // View space position calculated from the depth sample.
         float3 vp_depth = InverseProjectUV(ProjectVP(vp_ray));
@@ -64,7 +71,7 @@ float4 Fragment(Varyings input) : SV_Target
         float diff = vp_ray.z - vp_depth.z;
 
         // Occlusion test.
-        if (diff > 0.01 && diff < _RejectionDepth) alpha -= 0.1 * Random(seed + i);
+        if (diff > 0.01 && diff < _RejectionDepth) alpha -= 5.0 / _SampleCount * Random(seed + i);
         if (alpha <= 0) return 0;
     }
 
