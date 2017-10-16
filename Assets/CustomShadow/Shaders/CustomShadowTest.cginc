@@ -12,6 +12,10 @@ uint _SampleCount;
 // Length of ray-tracing steps
 float _StepLength;
 
+float _SampleWeight;
+
+float _NoiseStrength;
+
 // Get a raw depth from the depth buffer.
 float SampleRawDepth(float2 uv)
 {
@@ -45,33 +49,36 @@ float2 ProjectVP(float3 vp)
 
 float4 Fragment(Varyings input) : SV_Target
 {
+    // Random number seed
     uint seed =
-        input.texcoord.x * _CameraDepthTexture_TexelSize.z * 100 +
-        input.texcoord.y * _CameraDepthTexture_TexelSize.w * 1000000;
+        input.texcoord.x * _CameraDepthTexture_TexelSize.z * 200 +
+        input.texcoord.y * _CameraDepthTexture_TexelSize.w * 2000000;
 
     // View space position of the origin
     float z0 = SampleRawDepth(input.texcoord);
     if (z0 > 0.999999) return 0; // BG early-out
     float3 vp0 = InverseProjectUVZ(input.texcoord, z0);
 
-    // Ray-tracing loop from the origin along the reverse light direction.
+    // Ray-tracing loop from the origin along the reverse light direction
     float alpha = 1;
     UNITY_LOOP for (uint i = 1; i < _SampleCount; i++)
     {
-        // View space position on the ray.
-        //float3 vp_ray = vp0 + _LightDirection * 0.005 * i;
+        // View space position of the ray sample
         float3 vp_ray = vp0 + _LightDirection * _StepLength * i;
 
-        // View space position calculated from the depth sample.
+        // View space position of the depth sample
         float3 vp_depth = InverseProjectUV(ProjectVP(vp_ray));
 
-        // Depth difference between them.
-        // Negative: ray is near than the depth sample (not occluded)
-        // Positive: ray is far than the depth sample (possibly occluded)
+        // Depth difference between ray/depth sample
+        // Negative: Ray sample is closer to the camera (not occluded)
+        // Positive: Ray sample is beyond the depth sample (possibly occluded)
         float diff = vp_ray.z - vp_depth.z;
 
-        // Occlusion test.
-        if (diff > 0.01 && diff < _RejectionDepth) alpha -= 5.0 / _SampleCount * Random(seed + i);
+        // Occlusion test
+        if (diff > 0.0001 && diff < _RejectionDepth)
+            alpha -= _SampleWeight * (1 - Random(seed + i) * _NoiseStrength);
+
+        // Completely occluded: Break out from the loop.
         if (alpha <= 0) return 0;
     }
 

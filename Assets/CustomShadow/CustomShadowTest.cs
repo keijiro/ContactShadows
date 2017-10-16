@@ -8,6 +8,7 @@ public class CustomShadowTest : MonoBehaviour
     [SerializeField] Light _light;
     [SerializeField, Range(0, 5)] float _rejectionDepth = 0.5f;
     [SerializeField, Range(8, 100)] int _sampleCount = 20;
+    [SerializeField, Range(0, 1)] float _sampleWeight = 0.5f;
 
     [SerializeField, HideInInspector] Shader _shader;
 
@@ -69,5 +70,7 @@ public class CustomShadowTest : MonoBehaviour
         _material.SetFloat("_RejectionDepth", _rejectionDepth);
         _material.SetInt("_SampleCount", _sampleCount);
         _material.SetFloat("_StepLength", distance / _sampleCount);
+        _material.SetFloat("_SampleWeight", (1 + _sampleWeight * _sampleCount) / (1 + _sampleCount));
+        _material.SetFloat("_NoiseStrength", 1 - _sampleWeight);
     }
 }

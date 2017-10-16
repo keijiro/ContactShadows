@@ -262,7 +262,7 @@ Transform:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 300514572}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -5.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
@@ -282,6 +282,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _light: {fileID: 1201452391}
   _rejectionDepth: 0.5
+  _sampleCount: 30
+  _sampleWeight: 0.2
   _shader: {fileID: 4800000, guid: 65b4f0d6f5fac3d45bf031141d9b4193, type: 3}
 --- !u!1001 &870485738
 Prefab:
@@ -430,7 +432,7 @@ Light:
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
-    m_Bias: 0.6
+    m_Bias: 0.5
     m_NormalBias: 0
     m_NearPlane: 0.2
   m_Cookie: {fileID: 0}
