@@ -1,9 +1,5 @@
 ﻿Shader "Hidden/CustomShadowTest"
 {
-    Properties
-    {
-        _MainTex("", 2D) = ""{}
-    }
     SubShader
     {
         Cull Off ZWrite Off ZTest Always
