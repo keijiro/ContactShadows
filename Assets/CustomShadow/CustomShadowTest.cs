@@ -8,7 +8,7 @@ public class CustomShadowTest : MonoBehaviour
     [SerializeField] Light _light;
 
     [SerializeField, Range(0, 5)] float _rejectionDepth = 0.5f;
-    [SerializeField, Range(4, 100)] int _sampleCount = 20;
+    [SerializeField, Range(4, 32)] int _sampleCount = 16;
 
     [SerializeField, HideInInspector] Shader _shader;
 

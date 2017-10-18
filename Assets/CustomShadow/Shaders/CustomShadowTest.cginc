@@ -57,10 +57,11 @@ float4 Fragment(Varyings input) : SV_Target
     float3 vp0 = InverseProjectUVZ(input.texcoord, z0);
 
     // Ray-tracing loop from the origin along the reverse light direction
+    float alpha = 1 - 0.25 + Random(seed + 10) * 0.5;
     UNITY_LOOP for (uint i = 0; i < _SampleCount; i++)
     {
         // View space position of the ray sample
-        float3 vp_ray = vp0 + _LightVector * (i + Random(seed + i) * 2 + 0.5);
+        float3 vp_ray = vp0 + _LightVector * (i + Random(seed) * 2 + 0.5);
 
         // View space position of the depth sample
         float3 vp_depth = InverseProjectUV(ProjectVP(vp_ray));
@@ -71,8 +72,11 @@ float4 Fragment(Varyings input) : SV_Target
         float diff = vp_ray.z - vp_depth.z;
 
         // Occlusion test
-        if (diff > 0.00001 && diff < _RejectionDepth) return 0;
+        if (diff > 0.00001 && diff < _RejectionDepth) alpha -= 0.5;
+
+        // Completely occluded.
+        if (alpha <= 0) return 0;
     }
 
-    return 1;
+    return saturate(alpha);
 }
