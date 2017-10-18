@@ -57,10 +57,10 @@ float4 Fragment(Varyings input) : SV_Target
     float3 vp0 = InverseProjectUVZ(input.texcoord, z0);
 
     // Ray-tracing loop from the origin along the reverse light direction
-    UNITY_LOOP for (uint i = 1; i < _SampleCount; i++)
+    UNITY_LOOP for (uint i = 0; i < _SampleCount; i++)
     {
         // View space position of the ray sample
-        float3 vp_ray = vp0 + _LightVector * (i + Random(seed + i) * 2 - 0.5);
+        float3 vp_ray = vp0 + _LightVector * (i + Random(seed + i) * 2 + 0.5);
 
         // View space position of the depth sample
         float3 vp_depth = InverseProjectUV(ProjectVP(vp_ray));

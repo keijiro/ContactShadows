@@ -282,7 +282,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _light: {fileID: 1201452391}
   _rejectionDepth: 0.5
-  _sampleCount: 30
+  _sampleCount: 10
   _shader: {fileID: 4800000, guid: 65b4f0d6f5fac3d45bf031141d9b4193, type: 3}
 --- !u!1001 &870485738
 Prefab:
