@@ -58,7 +58,8 @@ float4 Fragment(Varyings input) : SV_Target
 
     // Ray-tracing loop from the origin along the reverse light direction
     float alpha = 1 - 0.25 + Random(seed + 10) * 0.5;
-    float offs = Random(seed) * 2 + 0.5;
+    float offs = Random(seed) * 2;
+
     UNITY_LOOP for (uint i = 0; i < _SampleCount; i++)
     {
         // View space position of the ray sample
@@ -73,7 +74,8 @@ float4 Fragment(Varyings input) : SV_Target
         float diff = vp_ray.z - vp_depth.z;
 
         // Occlusion test
-        if (diff > 0.00001 && diff < _RejectionDepth) alpha -= 0.5;
+        float rej = _RejectionDepth * (1 + Random(seed + i)) / 2;
+        if (diff > 0 && diff < rej) alpha -= 0.5;
 
         // Completely occluded.
         if (alpha <= 0) return 0;
