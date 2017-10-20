@@ -68,7 +68,7 @@ public class CustomShadowTest : MonoBehaviour
         // Shader parameters
         _material.SetVector("_LightVector",
             transform.InverseTransformDirection(-_light.transform.forward) *
-            _light.shadowBias / _sampleCount
+            _light.shadowBias / (_sampleCount - 1.5f)
         );
 
         _material.SetFloat("_RejectionDepth", _rejectionDepth);
