@@ -13,6 +13,11 @@ float _Sharpness;
 // Total sample count
 uint _SampleCount;
 
+// Temporal filter variables
+sampler2D _MaskTex;
+fixed _Convergence;
+uint _FrameCount;
+
 // Get a raw depth from the depth buffer.
 float SampleRawDepth(float2 uv)
 {
@@ -44,26 +49,24 @@ float2 ProjectVP(float3 vp)
     return (cp.xy / cp.w + 1) * 0.5;
 }
 
-float4 Fragment(Varyings input) : SV_Target
+float4 FragmentShadow(Varyings input) : SV_Target
 {
-    // Random number seed
-    uint seed =
-        input.texcoord.x * _CameraDepthTexture_TexelSize.z * 200 +
-        input.texcoord.y * _CameraDepthTexture_TexelSize.w * 2000000;
+    // Temporal distributed noise offset
+    uint sx = input.texcoord.x * _CameraDepthTexture_TexelSize.z;
+    uint sy = input.texcoord.y * _CameraDepthTexture_TexelSize.w;
+    uint dither = ((((sx + sy) & 3) << 2) + (sx & 3));
+    float offs = frac((dither + _FrameCount) / 16.0);
 
     // View space position of the origin
     float z0 = SampleRawDepth(input.texcoord);
-    if (z0 > 0.999999) return 0; // BG early-out
+    if (z0 > 0.999999) return float4(1, 0, 0, _Convergence); // BG early-out
     float3 vp0 = InverseProjectUVZ(input.texcoord, z0);
 
     // Ray-tracing loop from the origin along the reverse light direction
-    float alpha = 1 - 0.25 + Random(seed + 10) * 0.5;
-    float offs = Random(seed) * 2;
-
     UNITY_LOOP for (uint i = 0; i < _SampleCount; i++)
     {
         // View space position of the ray sample
-        float3 vp_ray = vp0 + _LightVector * (i + offs);
+        float3 vp_ray = vp0 + _LightVector * (i + offs * 2);
 
         // View space position of the depth sample
         float3 vp_depth = InverseProjectUV(ProjectVP(vp_ray));
@@ -74,12 +77,14 @@ float4 Fragment(Varyings input) : SV_Target
         float diff = vp_ray.z - vp_depth.z;
 
         // Occlusion test
-        float rej = _RejectionDepth * (1 + Random(seed + i)) / 2;
-        if (diff > 0 && diff < rej) alpha -= 0.5;
-
-        // Completely occluded.
-        if (alpha <= 0) return 0;
+        if (diff > 0.01 * (1 - offs) && diff < _RejectionDepth)
+            return float4(0, 0, 0, 1);
     }
 
-    return saturate(alpha);
+    return float4(1, 0, 0, _Convergence);
+}
+
+float4 FragmentComposite(Varyings input) : SV_Target
+{
+    return tex2D(_MaskTex, input.texcoord).r;
 }
