@@ -13,8 +13,7 @@ public class CustomShadowTest : MonoBehaviour
 
     Material _material;
     RenderTexture _maskRT;
-    CommandBuffer _command1;
-    CommandBuffer _command2;
+    CommandBuffer _command1, _command2;
 
     void OnDestroy()
     {
@@ -26,13 +25,10 @@ public class CustomShadowTest : MonoBehaviour
                 DestroyImmediate(_material);
         }
 
-        if (_maskRT != null)
-        {
-            if (Application.isPlaying)
-                Destroy(_maskRT);
-            else
-                DestroyImmediate(_maskRT);
-        }
+        if (_command1 != null) _command1.Release();
+        if (_command2 != null) _command2.Release();
+
+        if (_maskRT != null) RenderTexture.ReleaseTemporary(_maskRT);
     }
 
     void OnPreCull()
@@ -64,54 +60,25 @@ public class CustomShadowTest : MonoBehaviour
 
         var camera = GetComponent<Camera>();
 
-        // Destroy the mask RT when the screen size was changed.
-        if (_maskRT != null &&
-            (_maskRT.width != camera.pixelWidth ||
-             _maskRT.height != camera.pixelHeight))
-        {
-            RenderTexture.ReleaseTemporary(_maskRT);
-            _command1.Release();
-            _command2.Release();
-            _maskRT = null;
-            _command1 = _command2 = null;
-        }
+        // We require the camera depth texture.
+        camera.depthTextureMode |= DepthTextureMode.Depth;
 
-        // Lazy initialization of the material.
+        // Lazy initialization of temp objects.
         if (_material == null)
         {
             _material = new Material(_shader);
             _material.hideFlags = HideFlags.DontSave;
         }
 
-        // Lazy initialization of the mask buffer.
-        if (_maskRT == null)
-        {
-            _maskRT = RenderTexture.GetTemporary(
-                camera.pixelWidth, camera.pixelHeight, 0,
-                RenderTextureFormat.RHalf
-            );
-        }
-
-        // Lazy initialization of the command buffer.
         if (_command1 == null)
         {
             _command1 = new CommandBuffer();
             _command2 = new CommandBuffer();
-
             _command1.name = "Contact Shadow Ray Tracing";
             _command2.name = "Contact Shadow Composite";
-
-            _command1.SetRenderTarget(_maskRT);
-            _command1.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
-
-            _command2.SetGlobalTexture(Shader.PropertyToID("_MaskTex"), _maskRT);
-            _command2.DrawProcedural(Matrix4x4.identity, _material, 1, MeshTopology.Triangles, 3);
         }
 
-        // We require the camera depth texture.
-        GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth;
-
-        // Shader parameters
+        // Firstly, update the shader parameters.
         _material.SetVector("_LightVector",
             transform.InverseTransformDirection(-_light.transform.forward) *
             _light.shadowBias / (_sampleCount - 1.5f)
@@ -121,5 +88,27 @@ public class CustomShadowTest : MonoBehaviour
         _material.SetInt("_SampleCount", _sampleCount);
         _material.SetFloat("_Convergence", 1.0f / 64);
         _material.SetInt("_FrameCount", Time.frameCount);
+
+        // Allocate a new mask RT.
+        var newMaskRT = RenderTexture.GetTemporary(
+            camera.pixelWidth, camera.pixelHeight, 0, RenderTextureFormat.RHalf
+        );
+        var maskTexID = Shader.PropertyToID("_MaskTex");
+
+        _command1.Clear();
+        _command1.SetGlobalTexture(maskTexID, _maskRT);
+        _command1.SetRenderTarget(newMaskRT);
+        _command1.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
+
+        _command2.Clear();
+        _command2.SetGlobalTexture(maskTexID, newMaskRT);
+        _command2.DrawProcedural(Matrix4x4.identity, _material, 1, MeshTopology.Triangles, 3);
+
+        // Flip the mask RTs.
+        // Although it's scary to release the previous mask RT here (we're
+        // going to use it in this frame!), it will stay allocated until the
+        // next frame.
+        RenderTexture.ReleaseTemporary(_maskRT);
+        _maskRT = newMaskRT;
     }
 }
