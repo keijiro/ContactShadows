@@ -78,6 +78,21 @@ public class CustomShadowTest : MonoBehaviour
             _command2.name = "Contact Shadow Composite";
         }
 
+        if (_maskRT != null &&
+            (_maskRT.width != camera.pixelWidth ||
+             _maskRT.height != camera.pixelHeight))
+        {
+            RenderTexture.ReleaseTemporary(_maskRT);
+            _maskRT = null;
+        }
+
+        if (_maskRT == null)
+            _maskRT = RenderTexture.GetTemporary(
+                camera.pixelWidth, camera.pixelHeight,
+                0, RenderTextureFormat.RHalf
+            );
+
+
         // Firstly, update the shader parameters.
         _material.SetVector("_LightVector",
             transform.InverseTransformDirection(-_light.transform.forward) *
@@ -89,26 +104,25 @@ public class CustomShadowTest : MonoBehaviour
         _material.SetFloat("_Convergence", 1.0f / 64);
         _material.SetInt("_FrameCount", Time.frameCount);
 
-        // Allocate a new mask RT.
-        var newMaskRT = RenderTexture.GetTemporary(
-            camera.pixelWidth, camera.pixelHeight, 0, RenderTextureFormat.RHalf
-        );
+        _command1.Clear();
+
+        var tempTexID = Shader.PropertyToID("_TempTex");
+        var temp2TexID = Shader.PropertyToID("_Temp2Tex");
         var maskTexID = Shader.PropertyToID("_MaskTex");
 
-        _command1.Clear();
-        _command1.SetGlobalTexture(maskTexID, _maskRT);
-        _command1.SetRenderTarget(newMaskRT);
+        _command1.GetTemporaryRT(tempTexID, camera.pixelWidth, camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.RHalf);
+        _command1.SetRenderTarget(tempTexID);
         _command1.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
 
-        _command2.Clear();
-        _command2.SetGlobalTexture(maskTexID, newMaskRT);
-        _command2.DrawProcedural(Matrix4x4.identity, _material, 1, MeshTopology.Triangles, 3);
+        _command1.GetTemporaryRT(temp2TexID, camera.pixelWidth, camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.RHalf);
+        _command1.SetRenderTarget(temp2TexID);
+        _command1.SetGlobalTexture(maskTexID, _maskRT);
+        _command1.DrawProcedural(Matrix4x4.identity, _material, 1, MeshTopology.Triangles, 3);
 
-        // Flip the mask RTs.
-        // Although it's scary to release the previous mask RT here (we're
-        // going to use it in this frame!), it will stay allocated until the
-        // next frame.
-        RenderTexture.ReleaseTemporary(_maskRT);
-        _maskRT = newMaskRT;
+        _command1.CopyTexture(temp2TexID, _maskRT);
+
+        _command2.Clear();
+        _command2.SetGlobalTexture(maskTexID, _maskRT);
+        _command2.DrawProcedural(Matrix4x4.identity, _material, 2, MeshTopology.Triangles, 3);
     }
 }

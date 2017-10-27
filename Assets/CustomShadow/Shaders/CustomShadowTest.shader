@@ -14,6 +14,15 @@
         }
         Pass
         {
+            CGPROGRAM
+            #pragma vertex Vertex
+            #pragma fragment FragmentFilter
+            #pragma target 3.5
+            #include "CustomShadowTest.cginc"
+            ENDCG
+        }
+        Pass
+        {
             Blend Zero SrcAlpha
             CGPROGRAM
             #pragma vertex Vertex

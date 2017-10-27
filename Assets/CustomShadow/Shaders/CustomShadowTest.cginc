@@ -15,6 +15,7 @@ uint _SampleCount;
 
 // Temporal filter variables
 sampler2D _MaskTex;
+sampler2D _TempTex;
 fixed _Convergence;
 uint _FrameCount;
 
@@ -51,8 +52,6 @@ float2 ProjectVP(float3 vp)
 
 float4 FragmentShadow(Varyings input) : SV_Target
 {
-    float prev = tex2D(_MaskTex, input.texcoord).r;
-
     // Temporal distributed noise offset
     uint sx = input.texcoord.x * _CameraDepthTexture_TexelSize.z;
     uint sy = input.texcoord.y * _CameraDepthTexture_TexelSize.w;
@@ -82,27 +81,33 @@ float4 FragmentShadow(Varyings input) : SV_Target
         if (diff > 0.01 * (1 - offs) && diff < _RejectionDepth) return 0;
     }
 
+    return 1;
+}
+
+float4 FragmentFilter(Varyings input) : SV_Target
+{
     float2 uv = input.texcoord;
     float4 duv = _CameraDepthTexture_TexelSize.xyxy * float4(1, 1, -1, 0) * 2;
 
-    float p1 = tex2D(_MaskTex, uv - duv.xy).r;
-    float p2 = tex2D(_MaskTex, uv - duv.wy).r;
-    float p3 = tex2D(_MaskTex, uv - duv.zy).r;
+    float prev = tex2D(_MaskTex, input.texcoord).r;
 
-    float p4 = tex2D(_MaskTex, uv - duv.xw).r;
-    float p6 = tex2D(_MaskTex, uv + duv.xw).r;
+    float p1 = tex2D(_TempTex, uv - duv.xy).r;
+    float p2 = tex2D(_TempTex, uv - duv.wy).r;
+    float p3 = tex2D(_TempTex, uv - duv.zy).r;
 
-    float p7 = tex2D(_MaskTex, uv + duv.xy).r;
-    float p8 = tex2D(_MaskTex, uv + duv.wy).r;
-    float p9 = tex2D(_MaskTex, uv + duv.zy).r;
+    float p4 = tex2D(_TempTex, uv - duv.xw).r;
+    float p5 = tex2D(_TempTex, uv         ).r;
+    float p6 = tex2D(_TempTex, uv + duv.xw).r;
 
-    float mp1 = min(min(min(min(min(min(min(p1, p2), p3), p4), p6), p7), p8), p9);
-    float mp2 = max(max(max(max(max(max(max(p1, p2), p3), p4), p6), p7), p8), p9);
+    float p7 = tex2D(_TempTex, uv + duv.xy).r;
+    float p8 = tex2D(_TempTex, uv + duv.wy).r;
+    float p9 = tex2D(_TempTex, uv + duv.zy).r;
 
-    mp1 = (mp1 + mp2) / 2;
+    float mp1 = min(min(min(min(min(min(min(min(p1, p2), p3), p4), p5), p6), p7), p8), p9);
+    float mp2 = max(max(max(max(max(max(max(max(p1, p2), p3), p4), p5), p6), p7), p8), p9);
 
     prev = clamp(prev, mp1, mp2);
-    return lerp(prev, 1, _Convergence);
+    return lerp(prev, p5, _Convergence * 4);
 }
 
 float4 FragmentComposite(Varyings input) : SV_Target
