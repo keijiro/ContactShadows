@@ -12,8 +12,11 @@ public class CustomShadowTest : MonoBehaviour
     [SerializeField, HideInInspector] Shader _shader;
 
     Material _material;
-    RenderTexture _maskRT;
+    RenderTexture _tempMaskRT, _prevMaskRT;
     CommandBuffer _command1, _command2;
+
+    // MRT array; Reused between frames to avoid GC memory allocation.
+    RenderTargetIdentifier[] _mrt = new RenderTargetIdentifier[2];
 
     void OnDestroy()
     {
@@ -25,10 +28,11 @@ public class CustomShadowTest : MonoBehaviour
                 DestroyImmediate(_material);
         }
 
+        if (_tempMaskRT != null) RenderTexture.ReleaseTemporary(_tempMaskRT);
+        if (_prevMaskRT != null) RenderTexture.ReleaseTemporary(_prevMaskRT);
+
         if (_command1 != null) _command1.Release();
         if (_command2 != null) _command2.Release();
-
-        if (_maskRT != null) RenderTexture.ReleaseTemporary(_maskRT);
     }
 
     void OnPreCull()
@@ -59,6 +63,9 @@ public class CustomShadowTest : MonoBehaviour
         if (_light == null) return;
 
         var camera = GetComponent<Camera>();
+        var scrWidth = camera.pixelWidth;
+        var scrHeight = camera.pixelHeight;
+        var maskFormat = RenderTextureFormat.R8;
 
         // We require the camera depth texture.
         camera.depthTextureMode |= DepthTextureMode.Depth;
@@ -78,21 +85,6 @@ public class CustomShadowTest : MonoBehaviour
             _command2.name = "Contact Shadow Composite";
         }
 
-        if (_maskRT != null &&
-            (_maskRT.width != camera.pixelWidth ||
-             _maskRT.height != camera.pixelHeight))
-        {
-            RenderTexture.ReleaseTemporary(_maskRT);
-            _maskRT = null;
-        }
-
-        if (_maskRT == null)
-            _maskRT = RenderTexture.GetTemporary(
-                camera.pixelWidth, camera.pixelHeight,
-                0, RenderTextureFormat.RHalf
-            );
-
-
         // Firstly, update the shader parameters.
         _material.SetVector("_LightVector",
             transform.InverseTransformDirection(-_light.transform.forward) *
@@ -101,28 +93,34 @@ public class CustomShadowTest : MonoBehaviour
 
         _material.SetFloat("_RejectionDepth", _rejectionDepth);
         _material.SetInt("_SampleCount", _sampleCount);
-        _material.SetFloat("_Convergence", 1.0f / 64);
+        _material.SetFloat("_Convergence", 1.0f / 32);
         _material.SetInt("_FrameCount", Time.frameCount);
 
+        // Discard the temp mask (used in the previous frame) and recreate it.
+        RenderTexture.ReleaseTemporary(_tempMaskRT);
+        _tempMaskRT = RenderTexture.GetTemporary(scrWidth, scrHeight, 0, maskFormat);
+
+        // Render the shadow mask within the first command buffer.
         _command1.Clear();
-
-        var tempTexID = Shader.PropertyToID("_TempTex");
-        var temp2TexID = Shader.PropertyToID("_Temp2Tex");
-        var maskTexID = Shader.PropertyToID("_MaskTex");
-
-        _command1.GetTemporaryRT(tempTexID, camera.pixelWidth, camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.RHalf);
-        _command1.SetRenderTarget(tempTexID);
+        _command1.SetGlobalTexture(Shader.PropertyToID("_ShadowMask"), BuiltinRenderTextureType.CurrentActive);
+        _command1.SetRenderTarget(_tempMaskRT);
         _command1.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
 
-        _command1.GetTemporaryRT(temp2TexID, camera.pixelWidth, camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.RHalf);
-        _command1.SetRenderTarget(temp2TexID);
-        _command1.SetGlobalTexture(maskTexID, _maskRT);
-        _command1.DrawProcedural(Matrix4x4.identity, _material, 1, MeshTopology.Triangles, 3);
+        // Allocate a new mask RT.
+        var newMaskRT = RenderTexture.GetTemporary(scrWidth, scrHeight, 0, maskFormat);
 
-        _command1.CopyTexture(temp2TexID, _maskRT);
-
+        // Apply the temporal filter and blend it to the screen-space shadow
+        // mask within the second command buffer.
         _command2.Clear();
-        _command2.SetGlobalTexture(maskTexID, _maskRT);
-        _command2.DrawProcedural(Matrix4x4.identity, _material, 2, MeshTopology.Triangles, 3);
+        _mrt[0] = BuiltinRenderTextureType.CurrentActive;
+        _mrt[1] = newMaskRT;
+        _command2.SetRenderTarget(_mrt, BuiltinRenderTextureType.CurrentActive);
+        _command2.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT);
+        _command2.SetGlobalTexture(Shader.PropertyToID("_TempMask"), _tempMaskRT);
+        _command2.DrawProcedural(Matrix4x4.identity, _material, 1, MeshTopology.Triangles, 3);
+
+        // Update history.
+        RenderTexture.ReleaseTemporary(_prevMaskRT);
+        _prevMaskRT = newMaskRT;
     }
 }
