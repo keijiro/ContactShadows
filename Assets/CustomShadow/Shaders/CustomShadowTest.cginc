@@ -57,10 +57,9 @@ float4 FragmentShadow(Varyings input) : SV_Target
     if (mask < 0.1) return mask;
 
     // Temporal distributed noise offset
-    uint sx = input.texcoord.x * _CameraDepthTexture_TexelSize.z;
-    uint sy = input.texcoord.y * _CameraDepthTexture_TexelSize.w;
-    uint dither = ((((sx + sy) & 3) << 2) + (sx & 3));
-    float offs = frac((dither + _FrameCount) / 16.0);
+    uint sx = input.texcoord.x * _CameraDepthTexture_TexelSize.z + 0.5;
+    uint sy = input.texcoord.y * _CameraDepthTexture_TexelSize.w + 0.5;
+    float offs = frac(IGNoise(sx, sy) + (_FrameCount % 8) / 8.0);
 
     // View space position of the origin
     float z0 = SampleRawDepth(input.texcoord);

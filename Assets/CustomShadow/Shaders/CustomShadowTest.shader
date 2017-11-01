@@ -20,7 +20,6 @@
         }
         Pass
         {
-        //    Blend Zero SrcAlpha
             CGPROGRAM
             #pragma vertex Vertex
             #pragma fragment FragmentComposite
