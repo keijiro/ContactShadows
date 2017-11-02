@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9eba26d5884ce4949bb78b48e03b227b, type: 3}
+  m_Name: NoiseTextures
+  m_EditorClassIdentifier: 
+  _textures:
+  - {fileID: 2800000, guid: 7f70ca7f8ebb5ab4b8621ef459b291bd, type: 3}
+  - {fileID: 2800000, guid: d5850ea59166cee4886be947111f3128, type: 3}
+  - {fileID: 2800000, guid: f7a1029af9933eb4987975169f812fb2, type: 3}
+  - {fileID: 2800000, guid: 3a4ab402d24d2b6408e68366f601f4ed, type: 3}
+  - {fileID: 2800000, guid: 565afa2f2be48214497b297e5b2bd2d4, type: 3}
+  - {fileID: 2800000, guid: e557a718dbf862142b0f9d588064dc04, type: 3}
+  - {fileID: 2800000, guid: 5b668c3715da61d428a5a30f47ddc11b, type: 3}
+  - {fileID: 2800000, guid: 3e108eb05fd635f41ac42a8cd7e211b3, type: 3}
+  - {fileID: 2800000, guid: 8d99d5f6670e2ee4fa15bef335e8d61b, type: 3}
+  - {fileID: 2800000, guid: 0b872d6d21ac95f4885c7f2be76d5534, type: 3}
+  - {fileID: 2800000, guid: 3d351005bf8996f4c9fe0a86a7770257, type: 3}
+  - {fileID: 2800000, guid: 1556fbb4e55aca44cbf4b02666f4a8b5, type: 3}
+  - {fileID: 2800000, guid: ba61078cde3b4ab4691b6b6cdcfc7b0c, type: 3}
+  - {fileID: 2800000, guid: 326568ca95da7624cb27d5ff483cd313, type: 3}
+  - {fileID: 2800000, guid: 96a40bc4b749af547ae11f377bd1f02f, type: 3}
+  - {fileID: 2800000, guid: cc71ebc168ca6d94d84ba42e3fa8f90c, type: 3}

@@ -13,6 +13,17 @@ float _Sharpness;
 // Total sample count
 uint _SampleCount;
 
+// Noise texture (used for dithering)
+sampler2D _NoiseTex;
+float2 _NoiseScale;
+
+// Temporal filter variables
+sampler2D _PrevMask;
+sampler2D _TempMask;
+sampler2D _ShadowMask;
+fixed _Convergence;
+uint _FrameCount;
+
 // Get a raw depth from the depth buffer.
 float SampleRawDepth(float2 uv)
 {
@@ -44,26 +55,24 @@ float2 ProjectVP(float3 vp)
     return (cp.xy / cp.w + 1) * 0.5;
 }
 
-float4 Fragment(Varyings input) : SV_Target
+float4 FragmentShadow(Varyings input) : SV_Target
 {
-    // Random number seed
-    uint seed =
-        input.texcoord.x * _CameraDepthTexture_TexelSize.z * 200 +
-        input.texcoord.y * _CameraDepthTexture_TexelSize.w * 2000000;
+    float mask = tex2D(_ShadowMask, input.texcoord).r;
+    if (mask < 0.1) return mask;
+
+    // Temporal distributed noise offset
+    float offs = tex2D(_NoiseTex, input.texcoord * _NoiseScale).a;
 
     // View space position of the origin
     float z0 = SampleRawDepth(input.texcoord);
-    if (z0 > 0.999999) return 0; // BG early-out
+    if (z0 > 0.999999) return mask; // BG early-out
     float3 vp0 = InverseProjectUVZ(input.texcoord, z0);
 
     // Ray-tracing loop from the origin along the reverse light direction
-    float alpha = 1 - 0.25 + Random(seed + 10) * 0.5;
-    float offs = Random(seed) * 2;
-
     UNITY_LOOP for (uint i = 0; i < _SampleCount; i++)
     {
         // View space position of the ray sample
-        float3 vp_ray = vp0 + _LightVector * (i + offs);
+        float3 vp_ray = vp0 + _LightVector * (i + offs * 2);
 
         // View space position of the depth sample
         float3 vp_depth = InverseProjectUV(ProjectVP(vp_ray));
@@ -74,12 +83,43 @@ float4 Fragment(Varyings input) : SV_Target
         float diff = vp_ray.z - vp_depth.z;
 
         // Occlusion test
-        float rej = _RejectionDepth * (1 + Random(seed + i)) / 2;
-        if (diff > 0 && diff < rej) alpha -= 0.5;
-
-        // Completely occluded.
-        if (alpha <= 0) return 0;
+        if (diff > 0.01 * (1 - offs) && diff < _RejectionDepth) return 0;
     }
 
-    return saturate(alpha);
+    return mask;
+}
+
+struct CompositeOutput
+{
+    fixed4 mask : SV_Target0;
+    fixed4 history : SV_Target1;
+};
+
+CompositeOutput FragmentComposite(Varyings input)
+{
+    float2 uv = input.texcoord;
+    float4 duv = _CameraDepthTexture_TexelSize.xyxy * float4(1, 1, -1, 0) * 2;
+
+    float prev = tex2D(_PrevMask, input.texcoord).r;
+
+    float p1 = tex2D(_TempMask, uv - duv.xy).r;
+    float p2 = tex2D(_TempMask, uv - duv.wy).r;
+    float p3 = tex2D(_TempMask, uv - duv.zy).r;
+
+    float p4 = tex2D(_TempMask, uv - duv.xw).r;
+    float p5 = tex2D(_TempMask, uv         ).r;
+    float p6 = tex2D(_TempMask, uv + duv.xw).r;
+
+    float p7 = tex2D(_TempMask, uv + duv.xy).r;
+    float p8 = tex2D(_TempMask, uv + duv.wy).r;
+    float p9 = tex2D(_TempMask, uv + duv.zy).r;
+
+    float mp1 = min(min(min(min(min(min(min(min(p1, p2), p3), p4), p5), p6), p7), p8), p9);
+    float mp2 = max(max(max(max(max(max(max(max(p1, p2), p3), p4), p5), p6), p7), p8), p9);
+
+    prev = clamp(prev, mp1, mp2);
+
+    CompositeOutput o;
+    o.history = o.mask = lerp(prev, p5, _Convergence);
+    return o;
 }

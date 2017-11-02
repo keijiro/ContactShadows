@@ -20,6 +20,13 @@ float Random(uint seed)
     return float(Hash(seed)) / 4294967295.0; // 2^32-1
 }
 
+// Interleaved gradient function from Jimenez 2014 http://goo.gl/eomGso
+float IGNoise(uint x, uint y)
+{
+    float f = dot(float2(0.06711056f, 0.00583715f), float2(x, y));
+    return frac(52.9829189f * frac(f));
+}
+
 // Vertex shader that procedurally draws a full-screen triangle.
 struct Varyings
 {

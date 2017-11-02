@@ -123,7 +123,7 @@ GameObject:
   - component: {fileID: 300514576}
   - component: {fileID: 300514574}
   - component: {fileID: 300514573}
-  - component: {fileID: 300514578}
+  - component: {fileID: 300514575}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -145,6 +145,23 @@ Behaviour:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 300514572}
   m_Enabled: 1
+--- !u!114 &300514575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 300514572}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65dc9fb7ff16b7142b39a0eeb7251376, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _light: {fileID: 1201452391}
+  _rejectionDepth: 0.12
+  _sampleCount: 10
+  _convergenceSpeed: 0.2
+  _shader: {fileID: 4800000, guid: 65b4f0d6f5fac3d45bf031141d9b4193, type: 3}
+  _noiseTextures: {fileID: 11400000, guid: 798030585d01fc549b6bcb2975851535, type: 2}
 --- !u!20 &300514576
 Camera:
   m_ObjectHideFlags: 0
@@ -193,21 +210,6 @@ Transform:
   m_Father: {fileID: 1549587572}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &300514578
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 300514572}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 65dc9fb7ff16b7142b39a0eeb7251376, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _light: {fileID: 1201452391}
-  _rejectionDepth: 0.02
-  _sampleCount: 12
-  _shader: {fileID: 4800000, guid: 65b4f0d6f5fac3d45bf031141d9b4193, type: 3}
 --- !u!1 &657846872
 GameObject:
   m_ObjectHideFlags: 0
@@ -431,7 +433,7 @@ Light:
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
-    m_Bias: 0.5
+    m_Bias: 0.1
     m_NormalBias: 0
     m_NearPlane: 0.2
   m_Cookie: {fileID: 0}

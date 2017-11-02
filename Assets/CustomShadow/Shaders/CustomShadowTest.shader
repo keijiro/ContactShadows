@@ -1,14 +1,22 @@
-﻿Shader "Hidden/CustomShadowTest"
+Shader "Hidden/CustomShadowTest"
 {
     SubShader
     {
         Cull Off ZWrite Off ZTest Always
         Pass
         {
-            Blend Zero SrcAlpha
             CGPROGRAM
             #pragma vertex Vertex
-            #pragma fragment Fragment
+            #pragma fragment FragmentShadow
+            #pragma target 3.5
+            #include "CustomShadowTest.cginc"
+            ENDCG
+        }
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex Vertex
+            #pragma fragment FragmentComposite
             #pragma target 3.5
             #include "CustomShadowTest.cginc"
             ENDCG
