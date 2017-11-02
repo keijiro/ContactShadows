@@ -3,13 +3,14 @@ using UnityEngine.Rendering;
 
 [ExecuteInEditMode]
 [RequireComponent(typeof(Camera))]
-public class CustomShadowTest : MonoBehaviour
+public sealed class CustomShadowTest : MonoBehaviour
 {
     [SerializeField] Light _light;
     [SerializeField, Range(0, 5)] float _rejectionDepth = 0.5f;
     [SerializeField, Range(4, 32)] int _sampleCount = 16;
 
     [SerializeField, HideInInspector] Shader _shader;
+    [SerializeField, HideInInspector] NoiseTextureSet _noiseTextures;
 
     Material _material;
     RenderTexture _tempMaskRT, _prevMaskRT;
@@ -96,6 +97,11 @@ public class CustomShadowTest : MonoBehaviour
         _material.SetFloat("_Convergence", 1.0f / 32);
         _material.SetInt("_FrameCount", Time.frameCount);
 
+        // Screen coordinate to noise texture cooridinate scale
+        var noiseTexture = _noiseTextures.GetTexture();
+        var noiseScale = new Vector2(scrWidth, scrHeight) / noiseTexture.width;
+        _material.SetVector("_NoiseScale", noiseScale);
+
         // Discard the temp mask (used in the previous frame) and recreate it.
         RenderTexture.ReleaseTemporary(_tempMaskRT);
         _tempMaskRT = RenderTexture.GetTemporary(scrWidth, scrHeight, 0, maskFormat);
@@ -103,6 +109,7 @@ public class CustomShadowTest : MonoBehaviour
         // Render the shadow mask within the first command buffer.
         _command1.Clear();
         _command1.SetGlobalTexture(Shader.PropertyToID("_ShadowMask"), BuiltinRenderTextureType.CurrentActive);
+        _command1.SetGlobalTexture(Shader.PropertyToID("_NoiseTex"), noiseTexture);
         _command1.SetRenderTarget(_tempMaskRT);
         _command1.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
 

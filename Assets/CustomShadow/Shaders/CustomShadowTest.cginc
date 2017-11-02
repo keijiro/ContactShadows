@@ -13,6 +13,10 @@ float _Sharpness;
 // Total sample count
 uint _SampleCount;
 
+// Noise texture (used for dithering)
+sampler2D _NoiseTex;
+float2 _NoiseScale;
+
 // Temporal filter variables
 sampler2D _PrevMask;
 sampler2D _TempMask;
@@ -57,9 +61,7 @@ float4 FragmentShadow(Varyings input) : SV_Target
     if (mask < 0.1) return mask;
 
     // Temporal distributed noise offset
-    uint sx = input.texcoord.x * _CameraDepthTexture_TexelSize.z + 0.5;
-    uint sy = input.texcoord.y * _CameraDepthTexture_TexelSize.w + 0.5;
-    float offs = frac(IGNoise(sx, sy) + (_FrameCount % 8) / 8.0);
+    float offs = tex2D(_NoiseTex, input.texcoord * _NoiseScale).a;
 
     // View space position of the origin
     float z0 = SampleRawDepth(input.texcoord);
@@ -118,6 +120,6 @@ CompositeOutput FragmentComposite(Varyings input)
     prev = clamp(prev, mp1, mp2);
 
     CompositeOutput o;
-    o.history = o.mask = lerp(prev, p5, _Convergence * 4);
+    o.history = o.mask = lerp(prev, p5, _Convergence);
     return o;
 }

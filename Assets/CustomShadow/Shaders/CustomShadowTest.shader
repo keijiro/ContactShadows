@@ -1,11 +1,5 @@
-﻿Shader "Hidden/CustomShadowTest"
+Shader "Hidden/CustomShadowTest"
 {
-    Properties
-    {
-        _PrevMask("", 2D) = ""{}
-        _TempMask("", 2D) = ""{}
-        _ShadowMask("", 2D) = ""{}
-    }
     SubShader
     {
         Cull Off ZWrite Off ZTest Always
