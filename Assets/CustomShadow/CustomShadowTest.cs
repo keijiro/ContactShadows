@@ -8,6 +8,7 @@ public sealed class CustomShadowTest : MonoBehaviour
     [SerializeField] Light _light;
     [SerializeField, Range(0, 5)] float _rejectionDepth = 0.5f;
     [SerializeField, Range(4, 32)] int _sampleCount = 16;
+    [SerializeField, Range(0, 1)] float _convergenceSpeed = 0.2f;
 
     [SerializeField, HideInInspector] Shader _shader;
     [SerializeField, HideInInspector] NoiseTextureSet _noiseTextures;
@@ -94,7 +95,7 @@ public sealed class CustomShadowTest : MonoBehaviour
 
         _material.SetFloat("_RejectionDepth", _rejectionDepth);
         _material.SetInt("_SampleCount", _sampleCount);
-        _material.SetFloat("_Convergence", 1.0f / 32);
+        _material.SetFloat("_Convergence", _convergenceSpeed * _convergenceSpeed);
         _material.SetInt("_FrameCount", Time.frameCount);
 
         // Screen coordinate to noise texture cooridinate scale

@@ -157,8 +157,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _light: {fileID: 1201452391}
-  _rejectionDepth: 0.2
+  _rejectionDepth: 0.12
   _sampleCount: 10
+  _convergenceSpeed: 0.2
   _shader: {fileID: 4800000, guid: 65b4f0d6f5fac3d45bf031141d9b4193, type: 3}
   _noiseTextures: {fileID: 11400000, guid: 798030585d01fc549b6bcb2975851535, type: 2}
 --- !u!20 &300514576
@@ -432,7 +433,7 @@ Light:
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
-    m_Bias: 0.5
+    m_Bias: 0.1
     m_NormalBias: 0
     m_NearPlane: 0.2
   m_Cookie: {fileID: 0}
