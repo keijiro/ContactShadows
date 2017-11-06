@@ -60,6 +60,8 @@ public sealed class CustomShadowTest : MonoBehaviour
         }
     }
 
+    Matrix4x4 _previousVP;
+
     void Update()
     {
         if (_light == null) return;
@@ -125,6 +127,14 @@ public sealed class CustomShadowTest : MonoBehaviour
         _command2.SetRenderTarget(_mrt, BuiltinRenderTextureType.CurrentActive);
         _command2.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT);
         _command2.SetGlobalTexture(Shader.PropertyToID("_TempMask"), _tempMaskRT);
+
+        var proj = GL.GetGPUProjectionMatrix(camera.nonJitteredProjectionMatrix, true);
+        //_material.SetMatrix("_NonJitteredVP", proj * camera.worldToCameraMatrix);
+        //_material.SetMatrix("_PreviousVP", _previousVP); //camera.previousViewProjectionMatrix);
+        _command2.SetGlobalMatrix("_NonJitteredVP", proj * camera.worldToCameraMatrix);
+        _command2.SetGlobalMatrix("_PreviousVP", _previousVP);//camera.previousViewProjectionMatrix);
+        _previousVP = proj * camera.worldToCameraMatrix;
+
         _command2.DrawProcedural(Matrix4x4.identity, _material, 1, MeshTopology.Triangles, 3);
 
         // Update history.

@@ -54,6 +54,11 @@ class Reprojector : MonoBehaviour
             Graphics.Blit(source, _history);
         }
 
+        var camera = GetComponent<Camera>();
+        var proj = GL.GetGPUProjectionMatrix(camera.nonJitteredProjectionMatrix, true);
+        _material.SetMatrix("_NonJitteredVP", proj * camera.worldToCameraMatrix);
+        _material.SetMatrix("_PreviousVP", camera.previousViewProjectionMatrix);
+
         var next = RenderTexture.GetTemporary(size.x, size.y, 0);
 
         Graphics.Blit(_history, next, _material, 0);
