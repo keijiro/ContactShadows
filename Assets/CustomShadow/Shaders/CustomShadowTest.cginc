@@ -24,6 +24,9 @@ sampler2D _ShadowMask;
 fixed _Convergence;
 uint _FrameCount;
 
+float4x4 _PreviousVP;
+float4x4 _NonJitteredVP;
+
 // Get a raw depth from the depth buffer.
 float SampleRawDepth(float2 uv)
 {
@@ -95,12 +98,40 @@ struct CompositeOutput
     fixed4 history : SV_Target1;
 };
 
+float2 CalculateMovec(float2 uv)
+{
+    float z = SAMPLE_DEPTH_TEXTURE_LOD(_CameraDepthTexture, float4(uv, 0, 0));
+
+#if defined(UNITY_REVERSED_Z)
+    z = 1 - z;
+#endif
+    float4 cp = float4(float3(uv, z) * 2 - 1, 1);
+    float4 vp = mul(unity_CameraInvProjection, cp);
+    vp /= vp.w;
+    vp.z = -vp.z;
+    float4 wp = mul(unity_CameraToWorld, vp);
+
+    float4 prevClipPos = mul(_PreviousVP, wp);
+    float4 curClipPos = cp * float4(1, -1, 1, 1);
+
+    float2 prevHPos = prevClipPos.xy / prevClipPos.w;
+    float2 curHPos = curClipPos.xy / curClipPos.w;
+
+    float2 vPosPrev = (prevHPos.xy + 1.0f) / 2.0f;
+    float2 vPosCur = (curHPos.xy + 1.0f) / 2.0f;
+#if UNITY_UV_STARTS_AT_TOP
+    vPosPrev.y = 1.0 - vPosPrev.y;
+    vPosCur.y = 1.0 - vPosCur.y;
+#endif
+    return vPosCur - vPosPrev;
+}
+
 CompositeOutput FragmentComposite(Varyings input)
 {
     float2 uv = input.texcoord;
     float4 duv = _CameraDepthTexture_TexelSize.xyxy * float4(1, 1, -1, 0) * 2;
 
-    float prev = tex2D(_PrevMask, input.texcoord).r;
+    float prev = tex2D(_PrevMask, uv - CalculateMovec(uv)).r;
 
     float p1 = tex2D(_TempMask, uv - duv.xy).r;
     float p2 = tex2D(_TempMask, uv - duv.wy).r;
