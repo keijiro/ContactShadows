@@ -39,6 +39,8 @@ public sealed class CustomShadowTest : MonoBehaviour
 
     void OnPreCull()
     {
+        UpdateCommandBuffer();
+
         // Add the command buffer to the light before camera culling.
         if (_command1 != null && _light != null)
         {
@@ -64,6 +66,12 @@ public sealed class CustomShadowTest : MonoBehaviour
 
     void Update()
     {
+        // We require the camera depth texture.
+        GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth;
+    }
+
+    void UpdateCommandBuffer()
+    {
         if (_light == null) return;
 
         var camera = GetComponent<Camera>();
@@ -71,8 +79,6 @@ public sealed class CustomShadowTest : MonoBehaviour
         var scrHeight = camera.pixelHeight;
         var maskFormat = RenderTextureFormat.R8;
 
-        // We require the camera depth texture.
-        camera.depthTextureMode |= DepthTextureMode.Depth;
 
         // Lazy initialization of temp objects.
         if (_material == null)
