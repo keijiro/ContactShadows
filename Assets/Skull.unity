@@ -197,7 +197,6 @@ GameObject:
   - component: {fileID: 300514574}
   - component: {fileID: 300514573}
   - component: {fileID: 300514578}
-  - component: {fileID: 300514575}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -219,19 +218,6 @@ Behaviour:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 300514572}
   m_Enabled: 1
---- !u!114 &300514575
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 300514572}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9607ac2160e426c458e50b7d406fc3f6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _interval: 1
-  _shader: {fileID: 4800000, guid: 57035a76dedd0ad4dad5a2588f893b1f, type: 3}
 --- !u!20 &300514576
 Camera:
   m_ObjectHideFlags: 0
@@ -294,7 +280,7 @@ MonoBehaviour:
   _light: {fileID: 1201452391}
   _rejectionDepth: 0.5
   _sampleCount: 10
-  _convergenceSpeed: 0.2
+  _convergenceSpeed: 0.5
   _shader: {fileID: 4800000, guid: 65b4f0d6f5fac3d45bf031141d9b4193, type: 3}
   _noiseTextures: {fileID: 11400000, guid: 798030585d01fc549b6bcb2975851535, type: 2}
 --- !u!1001 &870485738
@@ -381,7 +367,7 @@ PlayableDirector:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1118669683}
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 3
   m_PlayableAsset: {fileID: 11400000, guid: b3d8d41ad84b06a449aeaa25ee0477aa, type: 2}
   m_InitialState: 1
