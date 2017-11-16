@@ -22,7 +22,6 @@ sampler2D _PrevMask;
 sampler2D _TempMask;
 sampler2D _ShadowMask;
 fixed _Convergence;
-uint _FrameCount;
 
 float4x4 _PreviousVP;
 float4x4 _NonJitteredVP;
