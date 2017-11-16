@@ -91,12 +91,6 @@ float4 FragmentShadow(Varyings input) : SV_Target
     return mask;
 }
 
-struct CompositeOutput
-{
-    fixed4 mask : SV_Target0;
-    fixed4 history : SV_Target1;
-};
-
 float2 CalculateMovec(float2 uv)
 {
     float z = SAMPLE_DEPTH_TEXTURE_LOD(_CameraDepthTexture, float4(uv, 0, 0));
@@ -125,7 +119,11 @@ float2 CalculateMovec(float2 uv)
     return vPosCur - vPosPrev;
 }
 
-CompositeOutput FragmentComposite(Varyings input)
+void FragmentComposite(
+    out half4 mask : SV_Target0,
+    out half4 history : SV_Target1,
+    Varyings input
+)
 {
     float2 uv = input.texcoord;
     float4 duv = _CameraDepthTexture_TexelSize.xyxy * float4(1, 1, -1, 0) * 2;
@@ -149,7 +147,5 @@ CompositeOutput FragmentComposite(Varyings input)
 
     prev = clamp(prev, mp1, mp2);
 
-    CompositeOutput o;
-    o.history = o.mask = lerp(prev, p5, _Convergence);
-    return o;
+    history = mask = lerp(prev, p5, _Convergence);
 }
