@@ -28,23 +28,20 @@ float IGNoise(uint x, uint y)
 }
 
 // Vertex shader that procedurally draws a full-screen triangle.
-struct Varyings
-{
-    float4 position : SV_POSITION;
-    float2 texcoord : TEXCOORD0;
-};
-
-Varyings Vertex(uint vertexID : SV_VertexID)
+float2 Vertex(
+    uint vertexID : SV_VertexID,
+    out float4 position : SV_POSITION
+) : TEXCOORD
 {
     float x = (vertexID != 1) ? -1 : 3;
     float y = (vertexID == 2) ? -3 : 1;
-    float4 vpos = float4(x, y, 1, 1);
+    position = float4(x, y, 1, 1);
 
-    Varyings o;
-    o.position = vpos;
-    o.texcoord = (vpos.xy + 1) / 2;
+    float u = (x + 1) / 2;
 #ifdef UNITY_UV_STARTS_AT_TOP
-    o.texcoord.y = 1 - o.texcoord.y;
+    float v = (1 - y) / 2;
+#else
+    float v = (y + 1) / 2;
 #endif
-    return o;
+    return float2(u, v);
 }

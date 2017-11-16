@@ -57,18 +57,18 @@ float2 ProjectVP(float3 vp)
     return (cp.xy / cp.w + 1) * 0.5;
 }
 
-float4 FragmentShadow(Varyings input) : SV_Target
+half4 FragmentShadow(float2 uv : TEXCOORD) : SV_Target
 {
-    float mask = tex2D(_ShadowMask, input.texcoord).r;
+    float mask = tex2D(_ShadowMask, uv).r;
     if (mask < 0.1) return mask;
 
     // Temporal distributed noise offset
-    float offs = tex2D(_NoiseTex, input.texcoord * _NoiseScale).a;
+    float offs = tex2D(_NoiseTex, uv * _NoiseScale).a;
 
     // View space position of the origin
-    float z0 = SampleRawDepth(input.texcoord);
+    float z0 = SampleRawDepth(uv);
     if (z0 > 0.999999) return mask; // BG early-out
-    float3 vp0 = InverseProjectUVZ(input.texcoord, z0);
+    float3 vp0 = InverseProjectUVZ(uv, z0);
 
     // Ray-tracing loop from the origin along the reverse light direction
     UNITY_LOOP for (uint i = 0; i < _SampleCount; i++)
@@ -120,12 +120,11 @@ float2 CalculateMovec(float2 uv)
 }
 
 void FragmentComposite(
+    float2 uv : TEXCOORD,
     out half4 mask : SV_Target0,
-    out half4 history : SV_Target1,
-    Varyings input
+    out half4 history : SV_Target1
 )
 {
-    float2 uv = input.texcoord;
     float4 duv = _CameraDepthTexture_TexelSize.xyxy * float4(1, 1, -1, 0) * 2;
 
     float prev = tex2D(_PrevMask, uv - CalculateMovec(uv)).r;
