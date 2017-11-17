@@ -1,3 +1,6 @@
+// Experimental implementation of contact shadows for Unity
+// https://github.com/keijiro/ContactShadows
+
 using UnityEngine;
 using UnityEngine.Rendering;
 

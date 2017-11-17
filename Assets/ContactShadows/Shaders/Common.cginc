@@ -1,3 +1,6 @@
+// Experimental implementation of contact shadows for Unity
+// https://github.com/keijiro/ContactShadows
+
 #include "UnityCG.cginc"
 
 sampler2D _CameraDepthTexture;

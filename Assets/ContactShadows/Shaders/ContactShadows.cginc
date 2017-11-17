@@ -1,3 +1,6 @@
+// Experimental implementation of contact shadows for Unity
+// https://github.com/keijiro/ContactShadows
+
 #include "Common.cginc"
 
 // Light vector
