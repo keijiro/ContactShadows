@@ -1,12 +1,12 @@
 fileFormatVersion: 2
 guid: 7b3a00ef07a2339438bcfec27473a3f5
-timeCreated: 1509337471
+timeCreated: 1510885067
 licenseType: Pro
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
   defaultReferences:
-  - _sourceMesh: {instanceID: 0}
+  - _sourceMesh: {fileID: 4300000, guid: 7da7101738797e24a87b9b8facb576c1, type: 3}
   - _shader: {fileID: 4800000, guid: 619086ced982fc846bf570102d06d047, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}

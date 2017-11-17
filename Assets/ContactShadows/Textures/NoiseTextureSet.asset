@@ -9,7 +9,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9eba26d5884ce4949bb78b48e03b227b, type: 3}
-  m_Name: NoiseTextures
+  m_Name: NoiseTextureSet
   m_EditorClassIdentifier: 
   _textures:
   - {fileID: 2800000, guid: 7f70ca7f8ebb5ab4b8621ef459b291bd, type: 3}

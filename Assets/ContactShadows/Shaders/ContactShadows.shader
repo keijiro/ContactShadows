@@ -1,4 +1,4 @@
-Shader "Hidden/CustomShadowTest"
+Shader "Hidden/PostEffects/ContactShadows"
 {
     SubShader
     {
@@ -9,7 +9,7 @@ Shader "Hidden/CustomShadowTest"
             #pragma vertex Vertex
             #pragma fragment FragmentShadow
             #pragma target 3.5
-            #include "CustomShadowTest.cginc"
+            #include "ContactShadows.cginc"
             ENDCG
         }
         Pass
@@ -18,7 +18,7 @@ Shader "Hidden/CustomShadowTest"
             #pragma vertex Vertex
             #pragma fragment FragmentComposite
             #pragma target 3.5
-            #include "CustomShadowTest.cginc"
+            #include "ContactShadows.cginc"
             ENDCG
         }
     }
