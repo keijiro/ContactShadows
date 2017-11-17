@@ -32,8 +32,8 @@ namespace PostEffects
         RenderTexture _tempMaskRT, _prevMaskRT;
         CommandBuffer _command1, _command2;
 
-        // We track the VP matrix without using Camera.previousViewProjectionMatrix
-        // because it's unusable in OnPreCull.
+        // We track the VP matrix without using previousViewProjectionMatrix
+        // because it's not available for use in OnPreCull.
         Matrix4x4 _previousVP;
 
         // MRT array; Reused between frames to avoid GC memory allocation.
@@ -43,7 +43,7 @@ namespace PostEffects
 
         #region Internal utility functions
 
-        // Calculates the view-projection matrix.
+        // Calculates the view-projection matrix for GPU use.
         Matrix4x4 CalculateVPMatrix()
         {
             var cam = GetComponent<Camera>();
@@ -89,8 +89,8 @@ namespace PostEffects
         void OnPreRender()
         {
             // We can remove the command buffer before starting render in this
-            // camera. Actually this should be done in OnPostRender, but it crashes
-            // for some reasons. So, we do this in OnPreRender instead.
+            // camera. Actually this should be done in OnPostRender, but it
+            // crashes for some reasons. So, we do this in OnPreRender instead.
             if (_light != null &&_command1 != null)
             {
                 _light.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, _command1);
@@ -100,8 +100,9 @@ namespace PostEffects
 
         void Update()
         {
-            // We require the camera depth texture.
-            GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth;
+            // We require the motion vectors texture
+            GetComponent<Camera>().depthTextureMode |=
+                DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
         }
 
         #endregion

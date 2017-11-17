@@ -5,6 +5,8 @@ using UnityEngine;
 
 namespace PostEffects
 {
+    // A custom scriptable object class that is used only for managing
+    // references to the noise texture assets.
     public sealed class NoiseTextureSet : ScriptableObject
     {
         [SerializeField] Texture2D [] _textures;
