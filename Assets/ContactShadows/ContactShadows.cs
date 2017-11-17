@@ -15,7 +15,7 @@ namespace PostEffects
         [SerializeField] Light _light;
         [SerializeField, Range(0, 5)] float _rejectionDepth = 0.5f;
         [SerializeField, Range(4, 32)] int _sampleCount = 16;
-        [SerializeField, Range(0, 1)] float _convergenceSpeed = 0.2f;
+        [SerializeField, Range(0, 1)] float _temporalFilter = 0.5f;
 
         #endregion
 
@@ -41,19 +41,6 @@ namespace PostEffects
 
         #endregion
 
-        #region Internal utility functions
-
-        // Calculates the view-projection matrix for GPU use.
-        Matrix4x4 CalculateVPMatrix()
-        {
-            var cam = GetComponent<Camera>();
-            var p = cam.nonJitteredProjectionMatrix;
-            var v = cam.worldToCameraMatrix;
-            return GL.GetGPUProjectionMatrix(p, true) * v;
-        }
-
-        #endregion
-
         #region MonoBehaviour implementation
 
         void OnDestroy()
@@ -76,11 +63,14 @@ namespace PostEffects
 
         void OnPreCull()
         {
-            // Update and set the command buffers to the target light.
-            UpdateCommandBuffer();
+            // Update the temporary objects and build the command buffers for
+            // the target light.
 
-            if (_light != null &&_command1 != null)
+            UpdateTempObjects();
+
+            if (_light != null)
             {
+                BuildCommandBuffer();
                 _light.AddCommandBuffer(LightEvent.AfterScreenspaceMask, _command1);
                 _light.AddCommandBuffer(LightEvent.AfterScreenspaceMask, _command2);
             }
@@ -91,31 +81,44 @@ namespace PostEffects
             // We can remove the command buffer before starting render in this
             // camera. Actually this should be done in OnPostRender, but it
             // crashes for some reasons. So, we do this in OnPreRender instead.
-            if (_light != null &&_command1 != null)
+
+            if (_light != null)
             {
                 _light.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, _command1);
                 _light.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, _command2);
+                // TODO: clear command buffer here?
             }
         }
 
         void Update()
         {
-            // We require the motion vectors texture
-            GetComponent<Camera>().depthTextureMode |=
-                DepthTextureMode.Depth | DepthTextureMode.MotionVectors;
+            // We require the camera depth texture.
+            GetComponent<Camera>().depthTextureMode |= DepthTextureMode.Depth;
         }
 
         #endregion
 
-        #region Command buffer management
+        #region Internal methods
 
-        void UpdateCommandBuffer()
+        // Calculates the view-projection matrix for GPU use.
+        static Matrix4x4 CalculateVPMatrix()
         {
-            var camera = GetComponent<Camera>();
-            var scrWidth = camera.pixelWidth;
-            var scrHeight = camera.pixelHeight;
-            var maskFormat = RenderTextureFormat.R8;
+            var cam = Camera.current;
+            var p = cam.nonJitteredProjectionMatrix;
+            var v = cam.worldToCameraMatrix;
+            return GL.GetGPUProjectionMatrix(p, true) * v;
+        }
 
+        // Get the screen dimensions.
+        static Vector2Int GetScreenSize()
+        {
+            var cam = Camera.current;
+            return new Vector2Int(cam.pixelWidth, cam.pixelHeight);
+        }
+
+        // Update the temporary objects for the current frame.
+        void UpdateTempObjects()
+        {
             // Clear existing command buffers.
             if (_command1 != null)
             {
@@ -123,7 +126,14 @@ namespace PostEffects
                 _command2.Clear();
             }
 
-            // Do nothing if the target light is not set.
+            // Discard the temp mask RT (used in the previous frame).
+            if (_tempMaskRT != null)
+            {
+                RenderTexture.ReleaseTemporary(_tempMaskRT);
+                _tempMaskRT = null;
+            }
+
+            // Do nothing below if the target light is not set.
             if (_light == null) return;
 
             // Lazy initialization of temporary objects.
@@ -138,13 +148,15 @@ namespace PostEffects
                 _command1 = new CommandBuffer();
                 _command2 = new CommandBuffer();
                 _command1.name = "Contact Shadow Ray Tracing";
-                _command2.name = "Contact Shadow Composite";
+                _command2.name = "Contact Shadow Temporal Filter";
             }
 
             // Update the common shader parameters.
             _material.SetFloat("_RejectionDepth", _rejectionDepth);
             _material.SetInt("_SampleCount", _sampleCount);
-            _material.SetFloat("_Convergence", _convergenceSpeed * _convergenceSpeed);
+
+            var convergence = Mathf.Pow(1 - _temporalFilter, 2);
+            _material.SetFloat("_Convergence", convergence);
 
             // Calculate the light vector in the view space.
             _material.SetVector("_LightVector",
@@ -152,42 +164,56 @@ namespace PostEffects
                 _light.shadowBias / (_sampleCount - 1.5f)
             );
 
-            // Scale factor: Screen coordinate -> Noise texture cooridinate
+            // Noise texture and its scale factor
             var noiseTexture = _noiseTextures.GetTexture();
-            var noiseScale = new Vector2(scrWidth, scrHeight) / noiseTexture.width;
+            var noiseScale = (Vector2)GetScreenSize() / noiseTexture.width;
             _material.SetVector("_NoiseScale", noiseScale);
+            _material.SetTexture("_NoiseTex", noiseTexture);
 
             // View-Projection matrix difference from the previous frame
             var currentVP = CalculateVPMatrix();
             _material.SetMatrix("_NonJitteredVP", currentVP);
             _material.SetMatrix("_PreviousVP", _previousVP);
+            _previousVP = currentVP;
+        }
 
-            // Discard the temp mask (used in the previous frame) and recreate it.
-            RenderTexture.ReleaseTemporary(_tempMaskRT);
-            _tempMaskRT = RenderTexture.GetTemporary(scrWidth, scrHeight, 0, maskFormat);
+        // Build the command buffer for the current frame.
+        void BuildCommandBuffer()
+        {
+            var maskSize = GetScreenSize();
+            var maskFormat = RenderTextureFormat.R8;
+
+            // Allocate a temporary shadow mask RT (shared between command buffers).
+            _tempMaskRT = RenderTexture.GetTemporary(maskSize.x, maskSize.y, 0, maskFormat);
 
             // Render the shadow mask within the first command buffer.
             _command1.SetGlobalTexture(Shader.PropertyToID("_ShadowMask"), BuiltinRenderTextureType.CurrentActive);
-            _command1.SetGlobalTexture(Shader.PropertyToID("_NoiseTex"), noiseTexture);
             _command1.SetRenderTarget(_tempMaskRT);
             _command1.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
 
-            // Allocate a new mask RT.
-            var newMaskRT = RenderTexture.GetTemporary(scrWidth, scrHeight, 0, maskFormat);
+            if (_temporalFilter == 0)
+            {
+                // Simply blit the result to the shadow map texture.
+                _command2.Blit(_tempMaskRT, BuiltinRenderTextureType.CurrentActive);
+            }
+            else
+            {
+                // Allocate a new shadow mask RT.
+                var newMaskRT = RenderTexture.GetTemporary(maskSize.x, maskSize.y, 0, maskFormat);
 
-            // Apply the temporal filter and blend it to the screen-space shadow
-            // mask within the second command buffer.
-            _mrt[0] = BuiltinRenderTextureType.CurrentActive;
-            _mrt[1] = newMaskRT;
-            _command2.SetRenderTarget(_mrt, BuiltinRenderTextureType.CurrentActive);
-            _command2.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT);
-            _command2.SetGlobalTexture(Shader.PropertyToID("_TempMask"), _tempMaskRT);
-            _command2.DrawProcedural(Matrix4x4.identity, _material, 1, MeshTopology.Triangles, 3);
+                // Apply the temporal filter and blend it to the screen-space shadow
+                // mask within the second command buffer.
+                _mrt[0] = BuiltinRenderTextureType.CurrentActive;
+                _mrt[1] = newMaskRT;
+                _command2.SetRenderTarget(_mrt, BuiltinRenderTextureType.CurrentActive);
+                _command2.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT);
+                _command2.SetGlobalTexture(Shader.PropertyToID("_TempMask"), _tempMaskRT);
+                _command2.DrawProcedural(Matrix4x4.identity, _material, 1, MeshTopology.Triangles, 3);
 
-            // Update the history.
-            RenderTexture.ReleaseTemporary(_prevMaskRT);
-            _prevMaskRT = newMaskRT;
-            _previousVP = currentVP;
+                // Update the filter history.
+                if (_prevMaskRT != null) RenderTexture.ReleaseTemporary(_prevMaskRT);
+                _prevMaskRT = newMaskRT;
+            }
         }
 
         #endregion

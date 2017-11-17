@@ -6,6 +6,8 @@ Shader "Hidden/PostEffects/ContactShadows"
     SubShader
     {
         Cull Off ZWrite Off ZTest Always
+
+        // #0 - Shadow mask construction pass
         Pass
         {
             CGPROGRAM
@@ -15,11 +17,13 @@ Shader "Hidden/PostEffects/ContactShadows"
             #include "ContactShadows.cginc"
             ENDCG
         }
+
+        // #2 - Temporal filter pass
         Pass
         {
             CGPROGRAM
             #pragma vertex Vertex
-            #pragma fragment FragmentComposite
+            #pragma fragment FragmentTempFilter
             #pragma target 3.5
             #include "ContactShadows.cginc"
             ENDCG

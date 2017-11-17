@@ -1,7 +1,15 @@
 // Experimental implementation of contact shadows for Unity
 // https://github.com/keijiro/ContactShadows
 
-#include "Common.cginc"
+#include "UnityCG.cginc"
+
+// Camera depth texture
+sampler2D _CameraDepthTexture;
+float4 _CameraDepthTexture_TexelSize;
+
+// Noise texture (used for dithering)
+sampler2D _NoiseTex;
+float2 _NoiseScale;
 
 // Light vector
 // (reversed light direction in view space) * (ray-trace sample interval)
@@ -10,24 +18,15 @@ float3 _LightVector;
 // Depth rejection threshold that determines the depth of each pixels.
 float _RejectionDepth;
 
-// Edge sharpness parameter
-float _Sharpness;
-
 // Total sample count
 uint _SampleCount;
-
-// Noise texture (used for dithering)
-sampler2D _NoiseTex;
-float2 _NoiseScale;
 
 // Temporal filter variables
 sampler2D _PrevMask;
 sampler2D _TempMask;
 sampler2D _ShadowMask;
-fixed _Convergence;
-
 float4x4 _PreviousVP;
-float4x4 _NonJitteredVP;
+half _Convergence;
 
 // Get a raw depth from the depth buffer.
 float SampleRawDepth(float2 uv)
@@ -60,6 +59,62 @@ float2 ProjectVP(float3 vp)
     return (cp.xy / cp.w + 1) * 0.5;
 }
 
+// Calculate the motion vector from the depth and the V/P difference.
+float2 CalculateMovec(float2 uv)
+{
+    float z = SAMPLE_DEPTH_TEXTURE_LOD(_CameraDepthTexture, float4(uv, 0, 0));
+
+#if defined(UNITY_REVERSED_Z)
+    z = 1 - z;
+#endif
+
+    float4 cp = float4(float3(uv, z) * 2 - 1, 1);
+    float4 vp = mul(unity_CameraInvProjection, cp);
+    vp /= vp.w;
+    vp.z = -vp.z;
+    float4 wp = mul(unity_CameraToWorld, vp);
+
+    float4 prevClipPos = mul(_PreviousVP, wp);
+    float4 curClipPos = cp * float4(1, -1, 1, 1);
+
+    float2 prevHPos = prevClipPos.xy / prevClipPos.w;
+    float2 curHPos = curClipPos.xy / curClipPos.w;
+
+    float2 vPosPrev = (prevHPos.xy + 1.0f) / 2.0f;
+    float2 vPosCur = (curHPos.xy + 1.0f) / 2.0f;
+
+#if UNITY_UV_STARTS_AT_TOP
+    vPosPrev.y = 1.0 - vPosPrev.y;
+    vPosCur.y = 1.0 - vPosCur.y;
+#endif
+
+    return vPosCur - vPosPrev;
+}
+
+//
+// Vertex shader - Full-screen triangle with procedural draw
+//
+float2 Vertex(
+    uint vertexID : SV_VertexID,
+    out float4 position : SV_POSITION
+) : TEXCOORD
+{
+    float x = (vertexID != 1) ? -1 : 3;
+    float y = (vertexID == 2) ? -3 : 1;
+    position = float4(x, y, 1, 1);
+
+    float u = (x + 1) / 2;
+#ifdef UNITY_UV_STARTS_AT_TOP
+    float v = (1 - y) / 2;
+#else
+    float v = (y + 1) / 2;
+#endif
+    return float2(u, v);
+}
+
+//
+// Fragment shader - Screen space ray-trancing shadow pass
+//
 half4 FragmentShadow(float2 uv : TEXCOORD) : SV_Target
 {
     float mask = tex2D(_ShadowMask, uv).r;
@@ -94,35 +149,10 @@ half4 FragmentShadow(float2 uv : TEXCOORD) : SV_Target
     return mask;
 }
 
-float2 CalculateMovec(float2 uv)
-{
-    float z = SAMPLE_DEPTH_TEXTURE_LOD(_CameraDepthTexture, float4(uv, 0, 0));
-
-#if defined(UNITY_REVERSED_Z)
-    z = 1 - z;
-#endif
-    float4 cp = float4(float3(uv, z) * 2 - 1, 1);
-    float4 vp = mul(unity_CameraInvProjection, cp);
-    vp /= vp.w;
-    vp.z = -vp.z;
-    float4 wp = mul(unity_CameraToWorld, vp);
-
-    float4 prevClipPos = mul(_PreviousVP, wp);
-    float4 curClipPos = cp * float4(1, -1, 1, 1);
-
-    float2 prevHPos = prevClipPos.xy / prevClipPos.w;
-    float2 curHPos = curClipPos.xy / curClipPos.w;
-
-    float2 vPosPrev = (prevHPos.xy + 1.0f) / 2.0f;
-    float2 vPosCur = (curHPos.xy + 1.0f) / 2.0f;
-#if UNITY_UV_STARTS_AT_TOP
-    vPosPrev.y = 1.0 - vPosPrev.y;
-    vPosCur.y = 1.0 - vPosCur.y;
-#endif
-    return vPosCur - vPosPrev;
-}
-
-void FragmentComposite(
+//
+// Fragment shader - Temporal reprojection filter pass
+//
+void FragmentTempFilter(
     float2 uv : TEXCOORD,
     out half4 mask : SV_Target0,
     out half4 history : SV_Target1
@@ -130,24 +160,26 @@ void FragmentComposite(
 {
     float4 duv = _CameraDepthTexture_TexelSize.xyxy * float4(1, 1, -1, 0) * 2;
 
-    float prev = tex2D(_PrevMask, uv - CalculateMovec(uv)).r;
+    // Get the neighborhood min/max samples.
+    float s1 = tex2D(_TempMask, uv - duv.xy).r;
+    float s2 = tex2D(_TempMask, uv - duv.wy).r;
+    float s3 = tex2D(_TempMask, uv - duv.zy).r;
 
-    float p1 = tex2D(_TempMask, uv - duv.xy).r;
-    float p2 = tex2D(_TempMask, uv - duv.wy).r;
-    float p3 = tex2D(_TempMask, uv - duv.zy).r;
+    float s4 = tex2D(_TempMask, uv - duv.xw).r;
+    float s5 = tex2D(_TempMask, uv         ).r;
+    float s6 = tex2D(_TempMask, uv + duv.xw).r;
 
-    float p4 = tex2D(_TempMask, uv - duv.xw).r;
-    float p5 = tex2D(_TempMask, uv         ).r;
-    float p6 = tex2D(_TempMask, uv + duv.xw).r;
+    float s7 = tex2D(_TempMask, uv + duv.xy).r;
+    float s8 = tex2D(_TempMask, uv + duv.wy).r;
+    float s9 = tex2D(_TempMask, uv + duv.zy).r;
 
-    float p7 = tex2D(_TempMask, uv + duv.xy).r;
-    float p8 = tex2D(_TempMask, uv + duv.wy).r;
-    float p9 = tex2D(_TempMask, uv + duv.zy).r;
+    float s_min = min(min(min(min(min(min(min(min(s1, s2), s3), s4), s5), s6), s7), s8), s9);
+    float s_max = max(max(max(max(max(max(max(max(s1, s2), s3), s4), s5), s6), s7), s8), s9);
 
-    float mp1 = min(min(min(min(min(min(min(min(p1, p2), p3), p4), p5), p6), p7), p8), p9);
-    float mp2 = max(max(max(max(max(max(max(max(p1, p2), p3), p4), p5), p6), p7), p8), p9);
+    // Get the previous frame sample and clamp it with the neighborhood samples.
+    float s_prev = tex2D(_PrevMask, uv - CalculateMovec(uv)).r;
+    s_prev = clamp(s_prev, s_min, s_max);
 
-    prev = clamp(prev, mp1, mp2);
-
-    history = mask = lerp(prev, p5, _Convergence);
+    // Output
+    history = mask = lerp(s_prev, s5, _Convergence);
 }

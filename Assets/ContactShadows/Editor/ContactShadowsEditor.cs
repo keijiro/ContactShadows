@@ -13,14 +13,14 @@ namespace PostEffects
         SerializedProperty _light;
         SerializedProperty _rejectionDepth;
         SerializedProperty _sampleCount;
-        SerializedProperty _convergenceSpeed;
+        SerializedProperty _temporalFilter;
 
         void OnEnable()
         {
             _light = serializedObject.FindProperty("_light");
             _rejectionDepth = serializedObject.FindProperty("_rejectionDepth");
             _sampleCount = serializedObject.FindProperty("_sampleCount");
-            _convergenceSpeed = serializedObject.FindProperty("_convergenceSpeed");
+            _temporalFilter = serializedObject.FindProperty("_temporalFilter");
         }
 
         public override void OnInspectorGUI()
@@ -30,7 +30,7 @@ namespace PostEffects
             EditorGUILayout.PropertyField(_light);
             EditorGUILayout.PropertyField(_rejectionDepth);
             EditorGUILayout.PropertyField(_sampleCount);
-            EditorGUILayout.PropertyField(_convergenceSpeed);
+            EditorGUILayout.PropertyField(_temporalFilter);
 
             serializedObject.ApplyModifiedProperties();
         }
