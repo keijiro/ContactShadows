@@ -47,8 +47,8 @@ Current Limitations
 - **At the moment, Contact Shadows only supports directional lights.**
 - It's still under optimization work. It can be slow in some situations.
   Average GPU time is 1.5ms - 2.0ms under FHD (1080p) /w Radeon RX 480.
-- The denoise filter has to be improved more. It introduces some hard-edge
-  artifacts in some worst-case situations (e.g. Grass scene).
+- The denoise filter still has room for improvement. It introduces hard-edge
+  artifacts in worst-case situations (e.g. Grass scene).
 
 License
 -------
