@@ -86,7 +86,8 @@ namespace PostEffects
             {
                 _light.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, _command1);
                 _light.RemoveCommandBuffer(LightEvent.AfterScreenspaceMask, _command2);
-                // TODO: clear command buffer here?
+                _command1.Clear();
+                _command2.Clear();
             }
         }
 
@@ -119,13 +120,6 @@ namespace PostEffects
         // Update the temporary objects for the current frame.
         void UpdateTempObjects()
         {
-            // Clear existing command buffers.
-            if (_command1 != null)
-            {
-                _command1.Clear();
-                _command2.Clear();
-            }
-
             // Discard the temp mask RT (used in the previous frame).
             if (_tempMaskRT != null)
             {
@@ -149,6 +143,11 @@ namespace PostEffects
                 _command2 = new CommandBuffer();
                 _command1.name = "Contact Shadow Ray Tracing";
                 _command2.name = "Contact Shadow Temporal Filter";
+            }
+            else
+            {
+                _command1.Clear();
+                _command2.Clear();
             }
 
             // Update the common shader parameters.
