@@ -34,7 +34,7 @@ namespace PostEffects
 
         // We track the VP matrix without using previousViewProjectionMatrix
         // because it's not available for use in OnPreCull.
-        Matrix4x4 _previousVP;
+        Matrix4x4 _previousVP = Matrix4x4.identity;
 
         // MRT array; Reused between frames to avoid GC memory allocation.
         RenderTargetIdentifier[] _mrt = new RenderTargetIdentifier[2];
@@ -169,11 +169,9 @@ namespace PostEffects
             _material.SetVector("_NoiseScale", noiseScale);
             _material.SetTexture("_NoiseTex", noiseTexture);
 
-            // View-Projection matrix difference from the previous frame
-            var currentVP = CalculateVPMatrix();
-            _material.SetMatrix("_NonJitteredVP", currentVP);
-            _material.SetMatrix("_PreviousVP", _previousVP);
-            _previousVP = currentVP;
+            // "Reproject into the previous view" matrix
+            _material.SetMatrix("_Reprojection", _previousVP * transform.localToWorldMatrix);
+            _previousVP = CalculateVPMatrix();
         }
 
         // Build the command buffer for the current frame.

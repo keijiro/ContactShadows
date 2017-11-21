@@ -25,7 +25,7 @@ uint _SampleCount;
 sampler2D _PrevMask;
 sampler2D _TempMask;
 sampler2D _ShadowMask;
-float4x4 _PreviousVP;
+float4x4 _Reprojection;
 half _Convergence;
 
 // Get a raw depth from the depth buffer.
@@ -59,36 +59,15 @@ float2 ProjectVP(float3 vp)
     return (cp.xy / cp.w + 1) * 0.5;
 }
 
-// Calculate the motion vector from the depth and the V/P difference.
+// Calculate the motion vector with using the reprojection matrix
 float2 CalculateMovec(float2 uv)
 {
-    float z = SAMPLE_DEPTH_TEXTURE_LOD(_CameraDepthTexture, float4(uv, 0, 0));
-
-#if defined(UNITY_REVERSED_Z)
-    z = 1 - z;
-#endif
-
-    float4 cp = float4(float3(uv, z) * 2 - 1, 1);
-    float4 vp = mul(unity_CameraInvProjection, cp);
-    vp /= vp.w;
-    vp.z = -vp.z;
-    float4 wp = mul(unity_CameraToWorld, vp);
-
-    float4 prevClipPos = mul(_PreviousVP, wp);
-    float4 curClipPos = cp * float4(1, -1, 1, 1);
-
-    float2 prevHPos = prevClipPos.xy / prevClipPos.w;
-    float2 curHPos = curClipPos.xy / curClipPos.w;
-
-    float2 vPosPrev = (prevHPos.xy + 1.0f) / 2.0f;
-    float2 vPosCur = (curHPos.xy + 1.0f) / 2.0f;
-
+    float4 cp = mul(_Reprojection, float4(InverseProjectUV(uv), 1));
+    float2 prev = (cp.xy / cp.w + 1) * 0.5;
 #if UNITY_UV_STARTS_AT_TOP
-    vPosPrev.y = 1.0 - vPosPrev.y;
-    vPosCur.y = 1.0 - vPosCur.y;
+    prev.y = 1 - prev.y;
 #endif
-
-    return vPosCur - vPosPrev;
+    return uv - prev;
 }
 
 //
