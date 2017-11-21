@@ -97,7 +97,7 @@ float2 Vertex(
 half4 FragmentShadow(float2 uv : TEXCOORD) : SV_Target
 {
     float mask = tex2D(_ShadowMask, uv).r;
-    if (mask < 0.1) return mask;
+    if (mask < 0.01) return mask;
 
     // Temporal distributed noise offset
     float offs = tex2D(_NoiseTex, uv * _NoiseScale).a;
