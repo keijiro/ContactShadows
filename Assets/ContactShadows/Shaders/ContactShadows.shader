@@ -13,7 +13,7 @@ Shader "Hidden/PostEffects/ContactShadows"
             CGPROGRAM
             #pragma vertex Vertex
             #pragma fragment FragmentShadow
-            #pragma target 3.5
+            #pragma target 4.5
             #include "ContactShadows.cginc"
             ENDCG
         }
@@ -24,7 +24,7 @@ Shader "Hidden/PostEffects/ContactShadows"
             CGPROGRAM
             #pragma vertex Vertex
             #pragma fragment FragmentTempFilter
-            #pragma target 3.5
+            #pragma target 4.5
             #include "ContactShadows.cginc"
             ENDCG
         }

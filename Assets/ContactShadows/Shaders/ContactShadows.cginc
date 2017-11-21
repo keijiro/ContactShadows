@@ -23,7 +23,12 @@ uint _SampleCount;
 
 // Temporal filter variables
 sampler2D _PrevMask;
+#if 1
+Texture2D _TempMask;
+SamplerState sampler_TempMask;
+#else
 sampler2D _TempMask;
+#endif
 sampler2D _ShadowMask;
 float4x4 _Reprojection;
 half _Convergence;
@@ -137,6 +142,17 @@ void FragmentTempFilter(
     out half4 history : SV_Target1
 )
 {
+#if 1
+    float2 duv = _CameraDepthTexture_TexelSize.xy * 0.5;
+
+    half4 s1 = _TempMask.Gather(sampler_TempMask, uv - duv);
+    half4 s2 = _TempMask.Gather(sampler_TempMask, uv + duv);
+
+    float s_min = min(min(min(min(min(min(s1.r, s1.g), s1.b), s1.a), s2.r), s2.g), s2.b);
+    float s_max = max(max(max(max(max(max(s1.r, s1.g), s1.b), s1.a), s2.r), s2.g), s2.b);
+
+    float s_center = s1.g;
+#else
     float4 duv = _CameraDepthTexture_TexelSize.xyxy * float4(1, 1, -1, 0) * 2;
 
     // Get the neighborhood min/max samples.
@@ -155,10 +171,13 @@ void FragmentTempFilter(
     float s_min = min(min(min(min(min(min(min(min(s1, s2), s3), s4), s5), s6), s7), s8), s9);
     float s_max = max(max(max(max(max(max(max(max(s1, s2), s3), s4), s5), s6), s7), s8), s9);
 
+    float s_center = s5;
+#endif
+
     // Get the previous frame sample and clamp it with the neighborhood samples.
     float s_prev = tex2D(_PrevMask, uv - CalculateMovec(uv)).r;
     s_prev = clamp(s_prev, s_min, s_max);
 
     // Output
-    history = mask = lerp(s_prev, s5, _Convergence);
+    history = mask = lerp(s_prev, s_center, _Convergence);
 }
