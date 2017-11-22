@@ -28,5 +28,15 @@ Shader "Hidden/PostEffects/ContactShadows"
             #include "ContactShadows.cginc"
             ENDCG
         }
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex Vertex
+            #pragma fragment FragmentTempFilter
+            #define TEMP_FILTER_ALT
+            #pragma target 4.5
+            #include "ContactShadows.cginc"
+            ENDCG
+        }
     }
 }

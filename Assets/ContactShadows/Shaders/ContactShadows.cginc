@@ -134,6 +134,28 @@ half4 FragmentShadow(float2 uv : TEXCOORD) : SV_Target
 }
 
 //
+// Neightborhood clamping sampling patterns
+//
+// Even frames
+//    +--+--+
+//    |R2|G2|
+// +--+--+--+
+// |R1|G1|B2|
+// +--+--+--+   Y
+// |A1|B1|      |
+// +--+--+      +--X
+//
+// Odd frames
+// +--+--+
+// |R2|G2|
+// +--+--+--+
+// |A2|R1|G1|
+// +--+--+--+
+//    |A1|B1|
+//    +--+--+
+//
+
+//
 // Fragment shader - Temporal reprojection filter pass
 //
 void FragmentTempFilter(
@@ -143,15 +165,20 @@ void FragmentTempFilter(
 )
 {
 #if 1
-    float2 duv = _CameraDepthTexture_TexelSize.xy * 0.5;
-
-    half4 s1 = _TempMask.Gather(sampler_TempMask, uv - duv);
-    half4 s2 = _TempMask.Gather(sampler_TempMask, uv + duv);
-
+    float2 ht = _CameraDepthTexture_TexelSize.xy * 0.5;
+#ifndef TEMP_FILTER_ALT
+    half4 s1 = _TempMask.Gather(sampler_TempMask, uv + ht * float2(-1, -1));
+    half4 s2 = _TempMask.Gather(sampler_TempMask, uv + ht * float2(+1, +1));
     float s_min = min(min(min(min(min(min(s1.r, s1.g), s1.b), s1.a), s2.r), s2.g), s2.b);
     float s_max = max(max(max(max(max(max(s1.r, s1.g), s1.b), s1.a), s2.r), s2.g), s2.b);
-
     float s_center = s1.g;
+#else
+    half4 s1 = _TempMask.Gather(sampler_TempMask, uv + ht * float2(+1, -1));
+    half4 s2 = _TempMask.Gather(sampler_TempMask, uv + ht * float2(-1, +1));
+    float s_min = min(min(min(min(min(min(s1.r, s1.g), s1.b), s1.a), s2.r), s2.g), s2.a);
+    float s_max = max(max(max(max(max(max(s1.r, s1.g), s1.b), s1.a), s2.r), s2.g), s2.a);
+    float s_center = s1.r;
+#endif
 #else
     float4 duv = _CameraDepthTexture_TexelSize.xyxy * float4(1, 1, -1, 0) * 2;
 
