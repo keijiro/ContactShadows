@@ -205,7 +205,10 @@ namespace PostEffects
                 _command2.SetRenderTarget(_mrt, BuiltinRenderTextureType.CurrentActive);
                 _command2.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT);
                 _command2.SetGlobalTexture(Shader.PropertyToID("_TempMask"), _tempMaskRT);
-                _command2.DrawProcedural(Matrix4x4.identity, _material, 1, MeshTopology.Triangles, 3);
+                _command2.DrawProcedural(
+                    Matrix4x4.identity, _material, 1 + (Time.frameCount & 1),
+                    MeshTopology.Triangles, 3
+                );
 
                 // Update the filter history.
                 if (_prevMaskRT != null) RenderTexture.ReleaseTemporary(_prevMaskRT);
