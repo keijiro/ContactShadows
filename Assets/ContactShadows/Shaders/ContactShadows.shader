@@ -13,19 +13,31 @@ Shader "Hidden/PostEffects/ContactShadows"
             CGPROGRAM
             #pragma vertex Vertex
             #pragma fragment FragmentShadow
-            #pragma target 3.5
-            #include "ContactShadows.cginc"
+            #pragma target 4.5
+            #include "Raytrace.cginc"
             ENDCG
         }
 
-        // #2 - Temporal filter pass
+        // #2 - Temporal filter pass for even frames
         Pass
         {
             CGPROGRAM
             #pragma vertex Vertex
             #pragma fragment FragmentTempFilter
-            #pragma target 3.5
-            #include "ContactShadows.cginc"
+            #pragma target 4.5
+            #include "TempFilter.cginc"
+            ENDCG
+        }
+
+        // #3 - Temporal filter pass for odd frames
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex Vertex
+            #pragma fragment FragmentTempFilter
+            #pragma target 4.5
+            #define TEMP_FILTER_ALT
+            #include "TempFilter.cginc"
             ENDCG
         }
     }
