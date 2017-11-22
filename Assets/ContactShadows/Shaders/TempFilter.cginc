@@ -3,16 +3,20 @@
 
 #include "Common.cginc"
 
+// Check if the gather instructions are available.
+#if SHADER_TARGET > 40
+    #if defined(TEMP_FILTER_ALT)
+        #define TEMP_FILTER_GATHER_ALT
+    #else
+        #define TEMP_FILTER_GATHER
+    #endif
+#endif
+
 // Shadow mask from the previous frame
 sampler2D _PrevMask;
 
 // Temporary result buffer
-#if defined(TEMP_FILTER_GATHER) || defined(TEMP_FILTER_GATHER_ALT)
-SamplerState sampler_TempMask;
-Texture2D _TempMask;
-#else
-sampler2D _TempMask;
-#endif
+UNITY_DECLARE_TEX2D(_TempMask);
 float4 _TempMask_TexelSize;
 
 // Temporal filter coefficients
@@ -85,17 +89,17 @@ void FragmentTempFilter(
 
     float4 offs = _TempMask_TexelSize.xyxy * float4(1, 1, -1, 0);
 
-    float s1 = tex2D(_TempMask, uv - offs.xy).r;
-    float s2 = tex2D(_TempMask, uv - offs.wy).r;
-    float s3 = tex2D(_TempMask, uv - offs.zy).r;
+    float s1 = UNITY_SAMPLE_TEX2D(_TempMask, uv - offs.xy).r;
+    float s2 = UNITY_SAMPLE_TEX2D(_TempMask, uv - offs.wy).r;
+    float s3 = UNITY_SAMPLE_TEX2D(_TempMask, uv - offs.zy).r;
 
-    float s4 = tex2D(_TempMask, uv - offs.xw).r;
-    float s5 = tex2D(_TempMask, uv          ).r;
-    float s6 = tex2D(_TempMask, uv + offs.xw).r;
+    float s4 = UNITY_SAMPLE_TEX2D(_TempMask, uv - offs.xw).r;
+    float s5 = UNITY_SAMPLE_TEX2D(_TempMask, uv          ).r;
+    float s6 = UNITY_SAMPLE_TEX2D(_TempMask, uv + offs.xw).r;
 
-    float s7 = tex2D(_TempMask, uv + offs.xy).r;
-    float s8 = tex2D(_TempMask, uv + offs.wy).r;
-    float s9 = tex2D(_TempMask, uv + offs.zy).r;
+    float s7 = UNITY_SAMPLE_TEX2D(_TempMask, uv + offs.xy).r;
+    float s8 = UNITY_SAMPLE_TEX2D(_TempMask, uv + offs.wy).r;
+    float s9 = UNITY_SAMPLE_TEX2D(_TempMask, uv + offs.zy).r;
 
     float smin = min(min(min(min(min(min(min(min(s1, s2), s3), s4), s5), s6), s7), s8), s9);
     float smax = max(max(max(max(max(max(max(max(s1, s2), s3), s4), s5), s6), s7), s8), s9);

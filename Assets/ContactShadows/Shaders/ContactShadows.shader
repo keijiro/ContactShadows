@@ -13,6 +13,7 @@ Shader "Hidden/PostEffects/ContactShadows"
             CGPROGRAM
             #pragma vertex Vertex
             #pragma fragment FragmentShadow
+            #pragma target 4.5
             #include "Raytrace.cginc"
             ENDCG
         }
@@ -24,7 +25,6 @@ Shader "Hidden/PostEffects/ContactShadows"
             #pragma vertex Vertex
             #pragma fragment FragmentTempFilter
             #pragma target 4.5
-            #define TEMP_FILTER_GATHER
             #include "TempFilter.cginc"
             ENDCG
         }
@@ -36,7 +36,7 @@ Shader "Hidden/PostEffects/ContactShadows"
             #pragma vertex Vertex
             #pragma fragment FragmentTempFilter
             #pragma target 4.5
-            #define TEMP_FILTER_GATHER_ALT
+            #define TEMP_FILTER_ALT
             #include "TempFilter.cginc"
             ENDCG
         }
