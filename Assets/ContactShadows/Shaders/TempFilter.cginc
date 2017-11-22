@@ -7,8 +7,12 @@
 sampler2D _PrevMask;
 
 // Temporary result buffer
+#if defined(TEMP_FILTER_GATHER) || defined(TEMP_FILTER_GATHER_ALT)
 SamplerState sampler_TempMask;
 Texture2D _TempMask;
+#else
+sampler2D _TempMask;
+#endif
 float4 _TempMask_TexelSize;
 
 // Temporal filter coefficients
@@ -33,7 +37,7 @@ void FragmentTempFilter(
     out half4 history : SV_Target1
 )
 {
-    #if defined(TEMP_FILTER)
+    #if defined(TEMP_FILTER_GATHER)
 
     // Neighborhood clamping sampling pattern for even frames
     //    +--+--+
@@ -54,7 +58,7 @@ void FragmentTempFilter(
 
     float scenter = s1.g;
 
-    #elif defined(TEMP_FILTER_ALT)
+    #elif defined(TEMP_FILTER_GATHER_ALT)
 
     // Neighborhood clamping sampling pattern for odd frames
     // +--+--+
