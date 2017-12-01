@@ -14,6 +14,7 @@ namespace PostEffects
         SerializedProperty _rejectionDepth;
         SerializedProperty _sampleCount;
         SerializedProperty _temporalFilter;
+        SerializedProperty _downsample;
 
         void OnEnable()
         {
@@ -21,6 +22,7 @@ namespace PostEffects
             _rejectionDepth = serializedObject.FindProperty("_rejectionDepth");
             _sampleCount = serializedObject.FindProperty("_sampleCount");
             _temporalFilter = serializedObject.FindProperty("_temporalFilter");
+            _downsample = serializedObject.FindProperty("_downsample");
         }
 
         public override void OnInspectorGUI()
@@ -31,6 +33,7 @@ namespace PostEffects
             EditorGUILayout.PropertyField(_rejectionDepth);
             EditorGUILayout.PropertyField(_sampleCount);
             EditorGUILayout.PropertyField(_temporalFilter);
+            EditorGUILayout.PropertyField(_downsample);
 
             serializedObject.ApplyModifiedProperties();
         }

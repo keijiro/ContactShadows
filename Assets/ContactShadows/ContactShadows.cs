@@ -16,6 +16,7 @@ namespace PostEffects
         [SerializeField, Range(0, 5)] float _rejectionDepth = 0.5f;
         [SerializeField, Range(4, 32)] int _sampleCount = 16;
         [SerializeField, Range(0, 1)] float _temporalFilter = 0.5f;
+        [SerializeField] bool _downsample = false;
 
         #endregion
 
@@ -29,7 +30,7 @@ namespace PostEffects
         #region Temporary objects
 
         Material _material;
-        RenderTexture _prevMaskRT, _freeMaskRT;
+        RenderTexture _prevMaskRT1, _prevMaskRT2;
         CommandBuffer _command1, _command2;
 
         // We track the VP matrix without using previousViewProjectionMatrix
@@ -51,8 +52,8 @@ namespace PostEffects
                     DestroyImmediate(_material);
             }
 
-            if (_prevMaskRT != null) RenderTexture.ReleaseTemporary(_prevMaskRT);
-            if (_freeMaskRT != null) RenderTexture.ReleaseTemporary(_freeMaskRT);
+            if (_prevMaskRT1 != null) RenderTexture.ReleaseTemporary(_prevMaskRT1);
+            if (_prevMaskRT2 != null) RenderTexture.ReleaseTemporary(_prevMaskRT2);
 
             if (_command1 != null) _command1.Release();
             if (_command2 != null) _command2.Release();
@@ -108,19 +109,20 @@ namespace PostEffects
         }
 
         // Get the screen dimensions.
-        static Vector2Int GetScreenSize()
+        Vector2Int GetScreenSize()
         {
             var cam = Camera.current;
-            return new Vector2Int(cam.pixelWidth / 2, cam.pixelHeight / 2);
+            var div = _downsample ? 2 : 1;
+            return new Vector2Int(cam.pixelWidth / div, cam.pixelHeight / div);
         }
 
         // Update the temporary objects for the current frame.
         void UpdateTempObjects()
         {
-            if (_freeMaskRT != null)
+            if (_prevMaskRT2 != null)
             {
-                RenderTexture.ReleaseTemporary(_freeMaskRT);
-                _freeMaskRT = null;
+                RenderTexture.ReleaseTemporary(_prevMaskRT2);
+                _prevMaskRT2 = null;
             }
 
             // Do nothing below if the target light is not set.
@@ -185,7 +187,7 @@ namespace PostEffects
 
             // Apply the temporal filter and output to the temporary shadow mask RT.
             var tempMaskRT = RenderTexture.GetTemporary(maskSize.x, maskSize.y, 0, maskFormat);
-            _command1.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT);
+            _command1.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT1);
             _command1.SetRenderTarget(tempMaskRT);
             _command1.DrawProcedural(Matrix4x4.identity, _material, 1 + (Time.frameCount & 1), MeshTopology.Triangles, 3);
 
@@ -194,8 +196,8 @@ namespace PostEffects
             _command2.DrawProcedural(Matrix4x4.identity, _material, 3, MeshTopology.Triangles, 3);
 
             // Update the filter history.
-            _freeMaskRT = _prevMaskRT;
-            _prevMaskRT = tempMaskRT;
+            _prevMaskRT2 = _prevMaskRT1;
+            _prevMaskRT1 = tempMaskRT;
         }
 
         #endregion
