@@ -14,12 +14,11 @@ Shader "Hidden/PostEffects/ContactShadows"
             CGPROGRAM
             #pragma vertex Vertex
             #pragma fragment FragmentShadow
-            #pragma target 4.5
             #include "Raytrace.cginc"
             ENDCG
         }
 
-        // #2 - Temporal filter pass for even frames
+        // #1 - Temporal filter pass for even frames
         Pass
         {
             CGPROGRAM
@@ -30,7 +29,7 @@ Shader "Hidden/PostEffects/ContactShadows"
             ENDCG
         }
 
-        // #3 - Temporal filter pass for odd frames
+        // #2 - Temporal filter pass for odd frames
         Pass
         {
             CGPROGRAM
@@ -39,6 +38,17 @@ Shader "Hidden/PostEffects/ContactShadows"
             #pragma target 4.5
             #define TEMP_FILTER_ALT
             #include "TempFilter.cginc"
+            ENDCG
+        }
+
+        // #3 - Composite with the shadow buffer
+        Pass
+        {
+            Blend Zero SrcAlpha
+            CGPROGRAM
+            #pragma vertex Vertex
+            #pragma fragment FragmentComposite
+            #include "Composite.cginc"
             ENDCG
         }
     }
@@ -59,7 +69,7 @@ Shader "Hidden/PostEffects/ContactShadows"
             ENDCG
         }
 
-        // #2 - Temporal filter pass for even frames
+        // #1 - Temporal filter pass for even frames
         Pass
         {
             CGPROGRAM
@@ -70,7 +80,7 @@ Shader "Hidden/PostEffects/ContactShadows"
             ENDCG
         }
 
-        // #3 - Temporal filter pass for odd frames
+        // #2 - Temporal filter pass for odd frames
         Pass
         {
             CGPROGRAM
@@ -79,6 +89,17 @@ Shader "Hidden/PostEffects/ContactShadows"
             #pragma target 3.0
             #define TEMP_FILTER_ALT
             #include "TempFilter.cginc"
+            ENDCG
+        }
+
+        // #3 - Composite with the shadow buffer
+        Pass
+        {
+            Blend Zero SrcAlpha
+            CGPROGRAM
+            #pragma vertex Vertex
+            #pragma fragment FragmentComposite
+            #include "Composite.cginc"
             ENDCG
         }
     }

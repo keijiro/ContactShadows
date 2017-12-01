@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.1016392, g: 0.091239385, b: 0.08491888, a: 1}
+  m_IndirectSpecularColor: {r: 0.10160852, g: 0.091204435, b: 0.08486664, a: 1}
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
@@ -280,7 +280,7 @@ MonoBehaviour:
   _light: {fileID: 1201452391}
   _rejectionDepth: 0.5
   _sampleCount: 10
-  _convergenceSpeed: 0.5
+  _temporalFilter: 0.5
   _shader: {fileID: 4800000, guid: 65b4f0d6f5fac3d45bf031141d9b4193, type: 3}
   _noiseTextures: {fileID: 11400000, guid: 798030585d01fc549b6bcb2975851535, type: 2}
 --- !u!1001 &870485738

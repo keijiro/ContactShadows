@@ -29,15 +29,12 @@ namespace PostEffects
         #region Temporary objects
 
         Material _material;
-        RenderTexture _tempMaskRT, _prevMaskRT;
+        RenderTexture _prevMaskRT, _freeMaskRT;
         CommandBuffer _command1, _command2;
 
         // We track the VP matrix without using previousViewProjectionMatrix
         // because it's not available for use in OnPreCull.
         Matrix4x4 _previousVP = Matrix4x4.identity;
-
-        // MRT array; Reused between frames to avoid GC memory allocation.
-        RenderTargetIdentifier[] _mrt = new RenderTargetIdentifier[2];
 
         #endregion
 
@@ -54,8 +51,8 @@ namespace PostEffects
                     DestroyImmediate(_material);
             }
 
-            if (_tempMaskRT != null) RenderTexture.ReleaseTemporary(_tempMaskRT);
             if (_prevMaskRT != null) RenderTexture.ReleaseTemporary(_prevMaskRT);
+            if (_freeMaskRT != null) RenderTexture.ReleaseTemporary(_freeMaskRT);
 
             if (_command1 != null) _command1.Release();
             if (_command2 != null) _command2.Release();
@@ -114,17 +111,16 @@ namespace PostEffects
         static Vector2Int GetScreenSize()
         {
             var cam = Camera.current;
-            return new Vector2Int(cam.pixelWidth, cam.pixelHeight);
+            return new Vector2Int(cam.pixelWidth / 2, cam.pixelHeight / 2);
         }
 
         // Update the temporary objects for the current frame.
         void UpdateTempObjects()
         {
-            // Discard the temp mask RT (used in the previous frame).
-            if (_tempMaskRT != null)
+            if (_freeMaskRT != null)
             {
-                RenderTexture.ReleaseTemporary(_tempMaskRT);
-                _tempMaskRT = null;
+                RenderTexture.ReleaseTemporary(_freeMaskRT);
+                _freeMaskRT = null;
             }
 
             // Do nothing below if the target light is not set.
@@ -180,40 +176,26 @@ namespace PostEffects
             var maskSize = GetScreenSize();
             var maskFormat = RenderTextureFormat.R8;
 
-            // Allocate a temporary shadow mask RT (shared between command buffers).
-            _tempMaskRT = RenderTexture.GetTemporary(maskSize.x, maskSize.y, 0, maskFormat);
-
-            // Render the shadow mask within the first command buffer.
+            // Do raytracing and output to the unfiltered mask RT.
+            var unfilteredMaskID = Shader.PropertyToID("_UnfilteredMask");
             _command1.SetGlobalTexture(Shader.PropertyToID("_ShadowMask"), BuiltinRenderTextureType.CurrentActive);
-            _command1.SetRenderTarget(_tempMaskRT);
+            _command1.GetTemporaryRT(unfilteredMaskID, maskSize.x, maskSize.y, 0, FilterMode.Point, maskFormat);
+            _command1.SetRenderTarget(unfilteredMaskID);
             _command1.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
 
-            if (_temporalFilter == 0)
-            {
-                // Simply blit the result to the shadow map texture.
-                _command2.Blit(_tempMaskRT, BuiltinRenderTextureType.CurrentActive);
-            }
-            else
-            {
-                // Allocate a new shadow mask RT.
-                var newMaskRT = RenderTexture.GetTemporary(maskSize.x, maskSize.y, 0, maskFormat);
+            // Apply the temporal filter and output to the temporary shadow mask RT.
+            var tempMaskRT = RenderTexture.GetTemporary(maskSize.x, maskSize.y, 0, maskFormat);
+            _command1.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT);
+            _command1.SetRenderTarget(tempMaskRT);
+            _command1.DrawProcedural(Matrix4x4.identity, _material, 1 + (Time.frameCount & 1), MeshTopology.Triangles, 3);
 
-                // Apply the temporal filter and blend it to the screen-space shadow
-                // mask within the second command buffer.
-                _mrt[0] = BuiltinRenderTextureType.CurrentActive;
-                _mrt[1] = newMaskRT;
-                _command2.SetRenderTarget(_mrt, BuiltinRenderTextureType.CurrentActive);
-                _command2.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT);
-                _command2.SetGlobalTexture(Shader.PropertyToID("_TempMask"), _tempMaskRT);
-                _command2.DrawProcedural(
-                    Matrix4x4.identity, _material, 1 + (Time.frameCount & 1),
-                    MeshTopology.Triangles, 3
-                );
+            // Composite with the shadow buffer within the second command buffer.
+            _command2.SetGlobalTexture(Shader.PropertyToID("_TempMask"), tempMaskRT);
+            _command2.DrawProcedural(Matrix4x4.identity, _material, 3, MeshTopology.Triangles, 3);
 
-                // Update the filter history.
-                if (_prevMaskRT != null) RenderTexture.ReleaseTemporary(_prevMaskRT);
-                _prevMaskRT = newMaskRT;
-            }
+            // Update the filter history.
+            _freeMaskRT = _prevMaskRT;
+            _prevMaskRT = tempMaskRT;
         }
 
         #endregion

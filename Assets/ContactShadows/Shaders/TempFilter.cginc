@@ -16,8 +16,8 @@
 sampler2D _PrevMask;
 
 // Temporary result buffer
-UNITY_DECLARE_TEX2D(_TempMask);
-float4 _TempMask_TexelSize;
+UNITY_DECLARE_TEX2D(_UnfilteredMask);
+float4 _UnfilteredMask_TexelSize;
 
 // Temporal filter coefficients
 float4x4 _Reprojection;
@@ -35,11 +35,7 @@ float2 CalculateMovec(float2 uv)
 }
 
 // Fragment shader - Temporal filter pass
-void FragmentTempFilter(
-    float2 uv : TEXCOORD,
-    out half4 mask : SV_Target0,
-    out half4 history : SV_Target1
-)
+half4 FragmentTempFilter(float2 uv : TEXCOORD) : SV_Target
 {
     #if defined(TEMP_FILTER_GATHER)
 
@@ -52,10 +48,10 @@ void FragmentTempFilter(
     // |A1|B1|      |
     // +--+--+      +--X
 
-    float2 offs = _TempMask_TexelSize.xy * 0.5;
+    float2 offs = _UnfilteredMask_TexelSize.xy * 0.5;
 
-    half4 s1 = _TempMask.Gather(sampler_TempMask, uv + offs * float2(-1, -1));
-    half4 s2 = _TempMask.Gather(sampler_TempMask, uv + offs * float2(+1, +1));
+    half4 s1 = _UnfilteredMask.Gather(sampler_UnfilteredMask, uv + offs * float2(-1, -1));
+    half4 s2 = _UnfilteredMask.Gather(sampler_UnfilteredMask, uv + offs * float2(+1, +1));
 
     float smin = min(min(min(min(min(min(s1.r, s1.g), s1.b), s1.a), s2.r), s2.g), s2.b);
     float smax = max(max(max(max(max(max(s1.r, s1.g), s1.b), s1.a), s2.r), s2.g), s2.b);
@@ -73,10 +69,10 @@ void FragmentTempFilter(
     //    |A1|B1|   |
     //    +--+--+   +--X
 
-    float2 offs = _TempMask_TexelSize.xy * 0.5;
+    float2 offs = _UnfilteredMask_TexelSize.xy * 0.5;
 
-    half4 s1 = _TempMask.Gather(sampler_TempMask, uv + offs * float2(+1, -1));
-    half4 s2 = _TempMask.Gather(sampler_TempMask, uv + offs * float2(-1, +1));
+    half4 s1 = _UnfilteredMask.Gather(sampler_UnfilteredMask, uv + offs * float2(+1, -1));
+    half4 s2 = _UnfilteredMask.Gather(sampler_UnfilteredMask, uv + offs * float2(-1, +1));
 
     float smin = min(min(min(min(min(min(s1.r, s1.g), s1.b), s1.a), s2.r), s2.g), s2.b);
     float smax = max(max(max(max(max(max(s1.r, s1.g), s1.b), s1.a), s2.r), s2.g), s2.b);
@@ -87,19 +83,19 @@ void FragmentTempFilter(
 
     // Neighborhood clamping without texgather
 
-    float4 offs = _TempMask_TexelSize.xyxy * float4(1, 1, -1, 0);
+    float4 offs = _UnfilteredMask_TexelSize.xyxy * float4(1, 1, -1, 0);
 
-    float s1 = UNITY_SAMPLE_TEX2D(_TempMask, uv - offs.xy).r;
-    float s2 = UNITY_SAMPLE_TEX2D(_TempMask, uv - offs.wy).r;
-    float s3 = UNITY_SAMPLE_TEX2D(_TempMask, uv - offs.zy).r;
+    float s1 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv - offs.xy).r;
+    float s2 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv - offs.wy).r;
+    float s3 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv - offs.zy).r;
 
-    float s4 = UNITY_SAMPLE_TEX2D(_TempMask, uv - offs.xw).r;
-    float s5 = UNITY_SAMPLE_TEX2D(_TempMask, uv          ).r;
-    float s6 = UNITY_SAMPLE_TEX2D(_TempMask, uv + offs.xw).r;
+    float s4 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv - offs.xw).r;
+    float s5 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv          ).r;
+    float s6 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv + offs.xw).r;
 
-    float s7 = UNITY_SAMPLE_TEX2D(_TempMask, uv + offs.xy).r;
-    float s8 = UNITY_SAMPLE_TEX2D(_TempMask, uv + offs.wy).r;
-    float s9 = UNITY_SAMPLE_TEX2D(_TempMask, uv + offs.zy).r;
+    float s7 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv + offs.xy).r;
+    float s8 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv + offs.wy).r;
+    float s9 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv + offs.zy).r;
 
     float smin = min(min(min(min(min(min(min(min(s1, s2), s3), s4), s5), s6), s7), s8), s9);
     float smax = max(max(max(max(max(max(max(max(s1, s2), s3), s4), s5), s6), s7), s8), s9);
@@ -113,5 +109,5 @@ void FragmentTempFilter(
     sprev = clamp(sprev, smin, smax);
 
     // Output
-    history = mask = lerp(sprev, scenter, _Convergence);
+    return lerp(sprev, scenter, _Convergence);
 }
