@@ -2,6 +2,7 @@
 // https://github.com/keijiro/ContactShadows
 
 #include "Common.cginc"
+#include "DepthUtil.cginc"
 
 // Shadow mask texture
 sampler2D _ShadowMask;

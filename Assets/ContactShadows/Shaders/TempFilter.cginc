@@ -2,21 +2,18 @@
 // https://github.com/keijiro/ContactShadows
 
 #include "Common.cginc"
-
-// Check if the gather instructions are available.
-#if SHADER_TARGET > 40
-    #if defined(TEMP_FILTER_ALT)
-        #define TEMP_FILTER_GATHER_ALT
-    #else
-        #define TEMP_FILTER_GATHER
-    #endif
-#endif
+#include "DepthUtil.cginc"
 
 // Shadow mask from the previous frame
 sampler2D _PrevMask;
 
 // Temporary result buffer
-UNITY_DECLARE_TEX2D(_UnfilteredMask);
+#if defined(TEX_GATHER_AVAILABLE)
+Texture2D _UnfilteredMask;
+SamplerState sampler_UnfilteredMask;
+#else
+sampler2D _UnfilteredMask;
+#endif
 float4 _UnfilteredMask_TexelSize;
 
 // Temporal filter coefficients
@@ -37,7 +34,8 @@ float2 CalculateMovec(float2 uv)
 // Fragment shader - Temporal filter pass
 half4 FragmentTempFilter(float2 uv : TEXCOORD) : SV_Target
 {
-    #if defined(TEMP_FILTER_GATHER)
+    #if defined(TEX_GATHER_AVAILABLE)
+    #if !defined(TEMP_FILTER_ALT)
 
     // Neighborhood clamping sampling pattern for even frames
     //    +--+--+
@@ -58,7 +56,7 @@ half4 FragmentTempFilter(float2 uv : TEXCOORD) : SV_Target
 
     float scenter = s1.g;
 
-    #elif defined(TEMP_FILTER_GATHER_ALT)
+    #else // TEMP_FILTER_ALT
 
     // Neighborhood clamping sampling pattern for odd frames
     // +--+--+
@@ -79,30 +77,31 @@ half4 FragmentTempFilter(float2 uv : TEXCOORD) : SV_Target
 
     float scenter = s1.r;
 
-    #else
+    #endif // TEMP_FILTER_ALT
+    #else // TEX_GATHER_AVAILABLE
 
     // Neighborhood clamping without texgather
 
     float4 offs = _UnfilteredMask_TexelSize.xyxy * float4(1, 1, -1, 0);
 
-    float s1 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv - offs.xy).r;
-    float s2 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv - offs.wy).r;
-    float s3 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv - offs.zy).r;
+    float s1 = tex2D(_UnfilteredMask, uv - offs.xy).r;
+    float s2 = tex2D(_UnfilteredMask, uv - offs.wy).r;
+    float s3 = tex2D(_UnfilteredMask, uv - offs.zy).r;
 
-    float s4 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv - offs.xw).r;
-    float s5 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv          ).r;
-    float s6 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv + offs.xw).r;
+    float s4 = tex2D(_UnfilteredMask, uv - offs.xw).r;
+    float s5 = tex2D(_UnfilteredMask, uv          ).r;
+    float s6 = tex2D(_UnfilteredMask, uv + offs.xw).r;
 
-    float s7 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv + offs.xy).r;
-    float s8 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv + offs.wy).r;
-    float s9 = UNITY_SAMPLE_TEX2D(_UnfilteredMask, uv + offs.zy).r;
+    float s7 = tex2D(_UnfilteredMask, uv + offs.xy).r;
+    float s8 = tex2D(_UnfilteredMask, uv + offs.wy).r;
+    float s9 = tex2D(_UnfilteredMask, uv + offs.zy).r;
 
     float smin = min(min(min(min(min(min(min(min(s1, s2), s3), s4), s5), s6), s7), s8), s9);
     float smax = max(max(max(max(max(max(max(max(s1, s2), s3), s4), s5), s6), s7), s8), s9);
 
     float scenter = s5;
 
-    #endif
+    #endif // TEX_GATHER_AVAILABLE
 
     // Get the previous frame sample and clamp it with the neighborhood samples.
     float sprev = tex2D(_PrevMask, uv - CalculateMovec(uv)).r;

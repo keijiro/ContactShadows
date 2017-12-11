@@ -48,6 +48,7 @@ Shader "Hidden/PostEffects/ContactShadows"
             CGPROGRAM
             #pragma vertex Vertex
             #pragma fragment FragmentComposite
+            #pragma target 4.5
             #include "Composite.cginc"
             ENDCG
         }
