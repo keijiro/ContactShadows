@@ -3,10 +3,10 @@
 
 #include "Common.cginc"
 
+// Cross bilateral reconstruction filter.
+
 sampler2D _TempMask;
 float4 _TempMask_TexelSize;
-
-// Cross bilateral denoise filter
 
 float GWeight(float zbase, float z)
 {

@@ -175,25 +175,46 @@ namespace PostEffects
         // Build the command buffer for the current frame.
         void BuildCommandBuffer()
         {
+            // Allocate the temporary shadow mask RT.
             var maskSize = GetScreenSize();
             var maskFormat = RenderTextureFormat.R8;
-
-            // Do raytracing and output to the unfiltered mask RT.
-            var unfilteredMaskID = Shader.PropertyToID("_UnfilteredMask");
-            _command1.SetGlobalTexture(Shader.PropertyToID("_ShadowMask"), BuiltinRenderTextureType.CurrentActive);
-            _command1.GetTemporaryRT(unfilteredMaskID, maskSize.x, maskSize.y, 0, FilterMode.Point, maskFormat);
-            _command1.SetRenderTarget(unfilteredMaskID);
-            _command1.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
-
-            // Apply the temporal filter and output to the temporary shadow mask RT.
             var tempMaskRT = RenderTexture.GetTemporary(maskSize.x, maskSize.y, 0, maskFormat);
-            _command1.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT1);
-            _command1.SetRenderTarget(tempMaskRT);
-            _command1.DrawProcedural(Matrix4x4.identity, _material, 1 + (Time.frameCount & 1), MeshTopology.Triangles, 3);
 
-            // Composite with the shadow buffer within the second command buffer.
-            _command2.SetGlobalTexture(Shader.PropertyToID("_TempMask"), tempMaskRT);
-            _command2.DrawProcedural(Matrix4x4.identity, _material, 3, MeshTopology.Triangles, 3);
+            // Command buffer 1: raytracing and temporal filter
+            if (_temporalFilter == 0)
+            {
+                // Do raytracing and output to the temporary shadow mask RT.
+                _command1.SetGlobalTexture(Shader.PropertyToID("_ShadowMask"), BuiltinRenderTextureType.CurrentActive);
+                _command1.SetRenderTarget(tempMaskRT);
+                _command1.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
+            }
+            else
+            {
+                // Do raytracing and output to the unfiltered mask RT.
+                var unfilteredMaskID = Shader.PropertyToID("_UnfilteredMask");
+                _command1.SetGlobalTexture(Shader.PropertyToID("_ShadowMask"), BuiltinRenderTextureType.CurrentActive);
+                _command1.GetTemporaryRT(unfilteredMaskID, maskSize.x, maskSize.y, 0, FilterMode.Point, maskFormat);
+                _command1.SetRenderTarget(unfilteredMaskID);
+                _command1.DrawProcedural(Matrix4x4.identity, _material, 0, MeshTopology.Triangles, 3);
+
+                // Apply the temporal filter and output to the temporary shadow mask RT.
+                _command1.SetGlobalTexture(Shader.PropertyToID("_PrevMask"), _prevMaskRT1);
+                _command1.SetRenderTarget(tempMaskRT);
+                _command1.DrawProcedural(Matrix4x4.identity, _material, 1 + (Time.frameCount & 1), MeshTopology.Triangles, 3);
+            }
+
+            // Command buffer 2: shadow mask composition
+            if (_downsample)
+            {
+                // Downsample enabled: Use upsampler for the composition.
+                _command2.SetGlobalTexture(Shader.PropertyToID("_TempMask"), tempMaskRT);
+                _command2.DrawProcedural(Matrix4x4.identity, _material, 3, MeshTopology.Triangles, 3);
+            }
+            else
+            {
+                // No downsample: Use simple blit.
+                _command2.Blit(tempMaskRT, BuiltinRenderTextureType.CurrentActive);
+            }
 
             // Update the filter history.
             _prevMaskRT2 = _prevMaskRT1;
