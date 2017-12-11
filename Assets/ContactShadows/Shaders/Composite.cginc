@@ -6,15 +6,11 @@
 sampler2D _TempMask;
 float4 _TempMask_TexelSize;
 
-half SampleAndFilter(float2 uv, float zbase)
-{
-    half s = tex2D(_TempMask, uv).r;
-    float z = SAMPLE_DEPTH_TEXTURE_LOD(_CameraDepthTexture, float4(uv, 0, 0));
-}
+// Cross bilateral denoise filter
 
 float GWeight(float zbase, float z)
 {
-    return saturate(1 - 10000 * abs((z - zbase) / zbase));
+    return 1 / (1 + 10000 * abs(z - zbase));
 }
 
 half4 FragmentComposite(float2 uv : TEXCOORD) : SV_Target
@@ -25,7 +21,7 @@ half4 FragmentComposite(float2 uv : TEXCOORD) : SV_Target
     float2 uv1 = uv - duv.wy;
     float2 uv2 = uv - duv.zy;
     float2 uv3 = uv + duv.zw;
-    float2 uv4 = uv + duv.ww;
+    float2 uv4 = uv;
     float2 uv5 = uv + duv.xw;
     float2 uv6 = uv + duv.zy;
     float2 uv7 = uv + duv.wy;
@@ -54,16 +50,12 @@ half4 FragmentComposite(float2 uv : TEXCOORD) : SV_Target
     half s0 = tex2D(_TempMask, uv0).r * w0;
     half s1 = tex2D(_TempMask, uv1).r * w1;
     half s2 = tex2D(_TempMask, uv2).r * w2;
-
     half s3 = tex2D(_TempMask, uv3).r * w3;
     half s4 = tex2D(_TempMask, uv4).r * w4;
     half s5 = tex2D(_TempMask, uv5).r * w5;
-
     half s6 = tex2D(_TempMask, uv6).r * w6;
     half s7 = tex2D(_TempMask, uv7).r * w7;
     half s8 = tex2D(_TempMask, uv8).r * w8;
-
-    //return half4(0, 0, 0, tex2D(_TempMask, uv).r);
 
     return (s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8) /
         (w0 + w1 + w2 + w3 + w4 + w5 + w6 + w7 + w8);
